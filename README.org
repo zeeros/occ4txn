@@ -1,5 +1,3 @@
 #+TITLE: Optimistic Concurrency Control for Distributed Transactions
 
-Collection of notes and code for the project course of the Distributed Systems 1 course, part of the Master in Computer Science at the Università di Trento (UNITN).
-
-*
+Collection of notes and code for the project of the Distributed Systems 1 course, part of the Master in Computer Science at the Università di Trento (UNITN).
