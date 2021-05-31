@@ -1,5 +1,6 @@
 #+TITLE: Optimistic Concurrency Control for Distributed Transactions
 
+
 Collection of notes and code for the project of the Distributed Systems 1 course, part of the Master in Computer Science at the Università di Trento (UNITN).
 
 
@@ -22,7 +23,7 @@ The goal is to allow *multiple clients* to make *concurrent transactions* (*TXN*
 - Crashes should be simulated on critical points of the execution, like validation/commit.
 - After a number of transactions takes place, the system allows to check if its state is consistent.
 
-** Implementation
+** Description
 
 The distributed nature requires us to use atomic commitment to guarantee consistency (e.g. 2PC). We assume conflicts are rare, and in doing so we choose to use a private workspace instead of any form of lock (whose adoption in our scenario would be wasteful and non-trivial).
 
