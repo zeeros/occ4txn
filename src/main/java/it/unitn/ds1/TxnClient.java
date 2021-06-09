@@ -236,7 +236,7 @@ public class TxnClient extends AbstractActor {
     double writeRandom = r.nextDouble();
     boolean doWrite = writeRandom < WRITE_PROBABILITY;
     if(doWrite && opDone) writeTwo();
-    
+
     // check if the transaction should end;
     // otherwise, read two again
     if(opDone) numOpDone++;
