@@ -22,7 +22,7 @@ dependencies {
 compileJava {
     options.compilerArgs += ["-Xlint:deprecation"]
 }
-mainClassName = "it.unitn.ds1.HelloExample"
+mainClassName = "it.unitn.ds1.CtrlSystem"
 
 run {
     standardInput = System.in
