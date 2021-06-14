@@ -6,6 +6,7 @@ import java.util.HashMap;
 
 public class CtrlSystem {
   final static int N_CLIENTS = 6;
+  final static int N_COORDINATORS = 3;
   final static int N_SERVERS = 3;
   final static int MAX_KEY = 10;
 
@@ -17,6 +18,12 @@ public class CtrlSystem {
     for (int i=0; i<N_CLIENTS; i++) {
       System.out.println("client"+i);
       system.actorOf(TxnClient.props(i), "client" + i);
+    }
+
+    // Create multiple Coordinator actors
+    for (int i=0; i<N_COORDINATORS; i++) {
+      System.out.println("coordinator"+i);
+      system.actorOf(Coordinator.props(i), "coordinator" + i);
     }
 
     // Create multiple Server actors
