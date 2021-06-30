@@ -1,13 +1,9 @@
+package it.unitn.ds1;
+
 import akka.actor.*;
-import it.unitn.ds1.TxnClient.ReadMsg;
 import it.unitn.ds1.TxnClient.TxnAcceptMsg;
 import it.unitn.ds1.TxnClient.TxnBeginMsg;
 import it.unitn.ds1.TxnClient.TxnEndMsg;
-import it.unitn.ds1.TxnClient.WelcomeMsg;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 
 
 public class Coordinator extends AbstractActor {
