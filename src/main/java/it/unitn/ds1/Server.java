@@ -11,7 +11,7 @@ public class Server extends AbstractActor {
 
   /*-- Actor constructor ---------------------------------------------------- */
 
-  public Server(int serverId, Map datastore) {
+  public Server(int serverId, Map<Integer,Integer> datastore) {
     this.serverId = serverId;
     this.datastore = datastore;
   }
