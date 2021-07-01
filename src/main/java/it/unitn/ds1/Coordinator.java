@@ -1,55 +1,58 @@
 package it.unitn.ds1;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import akka.actor.*;
 import it.unitn.ds1.TxnClient.TxnAcceptMsg;
 import it.unitn.ds1.TxnClient.TxnBeginMsg;
 import it.unitn.ds1.TxnClient.TxnEndMsg;
 
-
 public class Coordinator extends AbstractActor {
-  private final Integer coordinatorId;
-  
-//boolean that is true if the coordinator is handling a TXN for a client. False if not.
-private boolean coordinatorOccupied = false ;
+	private final Integer coordinatorId;
+	
+	private static final Logger log= LogManager.getLogger(CtrlSystem.class);
 
-  /*-- Actor constructor ---------------------------------------------------- */
+	// True if the coordinator is handling a TXN for a client.
+	private boolean coordinatorOccupied = false;
 
-  public Coordinator(int coordinatorId) {
-    this.coordinatorId = coordinatorId;
-  }
+	/*-- Actor constructor ---------------------------------------------------- */
 
-  static public Props props(int coordinatorId) {
-    return Props.create(Coordinator.class, () -> new Coordinator(coordinatorId));
-  }
+	public Coordinator(int coordinatorId) {
+		this.coordinatorId = coordinatorId;
+	}
 
-  /*-- Message handlers ---------------------------------------------------- - */
+	static public Props props(int coordinatorId) {
+		return Props.create(Coordinator.class, () -> new Coordinator(coordinatorId));
+	}
 
-  private void OnTxnBeginMsg(TxnBeginMsg msg) {
-	  Integer clientId = msg.clientId;
-	  coordinatorOccupied = false;
-	    if (coordinatorOccupied == false) {
-	    	System.out.println("the client" + clientId + "is attempting a Txn");
-	    	coordinatorOccupied = true;
-	    	System.out.println("The value of the coordinatorOccupied indicator is  "+ coordinatorOccupied);
-            getSender().tell(new TxnAcceptMsg() ,getSelf());
-	    } 
-  }  
-  private void OnTxnEndMsg(TxnEndMsg msg) {
-	  Integer clientId = msg.clientId;
-	  if (coordinatorOccupied) {
-          System.out.println("We will remove a client with the clientId" + coordinatorOccupied);
-		  coordinatorOccupied = false;
-		  System.out.println("The value of the coordinatorOccupied indicator is  "+ coordinatorOccupied);
-	  }
-	  
-  }
-  
-  @Override
-  public Receive createReceive() {
-    return receiveBuilder()
-    		.match(TxnBeginMsg.class, this::OnTxnBeginMsg)
-    		.match(TxnEndMsg.class, this::OnTxnEndMsg)
-            .build();
-  }
+	/*-- Message handlers ---------------------------------------------------- - */
+
+	private void OnTxnBeginMsg(TxnBeginMsg msg) {
+		Integer clientId = msg.clientId;
+		log.debug("Coordinator "+ coordinatorId + " receives BEGIN from client " + clientId);
+		coordinatorOccupied = false;
+		if (coordinatorOccupied == false) {
+			log.debug("Coordinator "+ coordinatorId + " is occupied");
+			coordinatorOccupied = true;
+			getSender().tell(new TxnAcceptMsg(), getSelf());
+		}
+	}
+
+	private void OnTxnEndMsg(TxnEndMsg msg) {
+		Integer clientId = msg.clientId;
+		log.debug("Coordinator "+ coordinatorId + " receives END from client " + clientId);
+		if (coordinatorOccupied) {
+			coordinatorOccupied = false;
+			log.debug("Coordinator "+ coordinatorId + " is free");
+		}
+
+	}
+
+	@Override
+	public Receive createReceive() {
+		return receiveBuilder().match(TxnBeginMsg.class, this::OnTxnBeginMsg).match(TxnEndMsg.class, this::OnTxnEndMsg)
+				.build();
+	}
 
 }
