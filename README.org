@@ -3,11 +3,13 @@
 
 Collection of notes and code for the project of the Distributed Systems 1 course, part of the Master in Computer Science at the Università di Trento (UNITN).
 
-
 * Concepts
-** TODO Strict serialization
-** TODO Optimistic concurrency control
-** TODO Two-phase commit (2PC)
+
+- Strict serialization :: While with /serialization/ transactions occur in some total order, in /strict serialization/ this total order is consistent with the real-time order: a read in a committed transaction =T2= sees the value updated by the latest commited transaction =T1=.
+- Optimistic concurrency control :: Implementing transactions with an optimistic approach means
+  - Acting on private workspace with no locking.
+  - Validating the sequence of operations only when should be committed.
+
 * Protocol
 
 The goal is to allow *multiple clients* to make *concurrent transactions* (*TXN*) on a *distributed database*. A TXN is a sequence of R/W operations on one or more items that can be commited or aborted.
@@ -25,9 +27,13 @@ The goal is to allow *multiple clients* to make *concurrent transactions* (*TXN*
 
 ** Description
 
-The distributed nature requires us to use atomic commitment to guarantee consistency (e.g. 2PC). We assume conflicts are rare, and in doing so we choose to use a private workspace instead of any form of lock (whose adoption in our scenario would be wasteful and non-trivial).
 
 [[./img/system_overview.jpg]]
+
+The distributed nature requires us to use atomic commitment to guarantee consistency (e.g. 2PC). We assume conflicts are rare, and in doing so we choose to use a private workspace instead of any form of lock (whose adoption in our scenario would be wasteful and non-trivial).
+
+
+[[./img/system_interaction_outline.jpg]]
 
 *** Client
 
