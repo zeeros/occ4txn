@@ -6,6 +6,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.ThreadContext;
 
 import akka.actor.*;
 import scala.concurrent.duration.Duration;
@@ -37,7 +38,7 @@ public class TxnClient extends AbstractActor {
   private Cancellable acceptTimeout;
   private final Random r;
   
-  private static final Logger log= LogManager.getLogger(CtrlSystem.class);
+  private static final Logger log= LogManager.getLogger(TxnClient.class);
 
   /*-- Actor constructor ---------------------------------------------------- */
 
@@ -160,7 +161,7 @@ public class TxnClient extends AbstractActor {
             new TxnAcceptTimeoutMsg(), // message sent to myself
             getContext().system().dispatcher(), getSelf()
     );
-    log.info("CLIENT " + clientId + " BEGIN");
+    log.info("client" + clientId + " BEGIN");
   }
 
   // end the current TXN sending TxnEndMsg to the coordinator
@@ -169,7 +170,7 @@ public class TxnClient extends AbstractActor {
     currentCoordinator.tell(new TxnEndMsg(clientId, doCommit), getSelf());
     firstValue = null;
     secondValue = null;
-    log.info("CLIENT " + clientId + " END");
+    log.info("client" + clientId + " END");
   }
 
   // READ two items (will move some amount from the value of the first to the second)
@@ -188,7 +189,7 @@ public class TxnClient extends AbstractActor {
     firstValue = null;
     secondValue = null;
 
-    log.info("CLIENT " + clientId + " READ #"+ numOpDone + " (" + firstKey + "), (" + secondKey + ")");
+    log.info("client" + clientId + " READ #"+ numOpDone + " (" + firstKey + "), (" + secondKey + ")");
   }
 
   // WRITE two items (called with probability WRITE_PROBABILITY after readTwo() values are returned)
@@ -199,7 +200,7 @@ public class TxnClient extends AbstractActor {
     if(firstValue >= 1) amountTaken = 1 + r.nextInt(firstValue);
     currentCoordinator.tell(new WriteMsg(clientId, firstKey, firstValue - amountTaken), getSelf());
     currentCoordinator.tell(new WriteMsg(clientId, secondKey, secondValue + amountTaken), getSelf());
-    log.info("CLIENT " + clientId + " WRITE #"+ numOpDone
+    log.info("client" + clientId + " WRITE #"+ numOpDone
             + " taken " + amountTaken
             + " (" + firstKey + ", " + (firstValue - amountTaken) + "), ("
             + secondKey + ", " + (secondValue + amountTaken) + ")");
@@ -229,7 +230,7 @@ public class TxnClient extends AbstractActor {
   }
 
   private void onReadResultMsg(ReadResultMsg msg) {
-	log.info("CLIENT " + clientId + " READ RESULT (" + msg.key + ", " + msg.value + ")");
+	log.info("client" + clientId + "<--[READ(" + msg.key + ")=" + msg.value + "]");
 
     // save the read value(s)
     if(msg.key.equals(firstKey)) firstValue = msg.value;
@@ -256,10 +257,10 @@ public class TxnClient extends AbstractActor {
   private void onTxnResultMsg(TxnResultMsg msg) throws InterruptedException {
     if(msg.commit) {
       numCommittedTxn++;
-      log.info("CLIENT " + clientId + " COMMIT OK ("+numCommittedTxn+"/"+numAttemptedTxn+")");
+      log.info("client" + clientId + "<--[COMMIT OK("+numCommittedTxn+"/"+numAttemptedTxn+")]");
     }
     else {
-      log.info("CLIENT " + clientId + " COMMIT FAIL ("+(numAttemptedTxn - numCommittedTxn)+"/"+numAttemptedTxn+")");
+      log.info("client" + clientId + "<--[COMMIT FAIL ("+(numAttemptedTxn - numCommittedTxn)+"/"+numAttemptedTxn+")]");
     }
     beginTxn();
   }

@@ -3,7 +3,6 @@ package it.unitn.ds1;
 import java.io.IOException;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
-import it.unitn.ds1.TxnClient.WelcomeMsg;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -13,10 +12,10 @@ import java.util.List;
 import java.util.Map;
 
 public class CtrlSystem {
-	final static int N_CLIENTS = 1;
-	final static int N_COORDINATORS = 1;
-	final static int N_SERVERS = 1;
-	final static int MAX_KEY = 10;
+	final static int N_CLIENTS = 2;
+	final static int N_COORDINATORS = 2;
+	final static int N_SERVERS = 2;
+	final static int MAX_KEY = 9;
 	
 	private static final Logger log = LogManager.getLogger(CtrlSystem.class);
 

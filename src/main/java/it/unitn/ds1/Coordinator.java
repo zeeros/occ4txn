@@ -18,7 +18,7 @@ public class Coordinator extends AbstractActor {
 	private Map<Integer, ActorRef> clients, servers;
 	private Map<Txn, List<DataOperation>> transactions;
 
-	private static final Logger log = LogManager.getLogger(CtrlSystem.class);
+	private static final Logger log = LogManager.getLogger(Coordinator.class);
 
 	/*-- Actor constructor ---------------------------------------------------- */
 
@@ -53,6 +53,21 @@ public class Coordinator extends AbstractActor {
 			this.dataoperation = dataoperation;
 		}
 	}
+	
+	// reply from the server when requested a READ on a given key
+	public static class ReadResultMsg implements Serializable {
+		public final Integer serverId;
+		public final Txn txn;
+		public final DataOperation dataoperation;
+		public final Integer result;
+
+		public ReadResultMsg(Integer serverId, Txn txn, DataOperation dataoperation, Integer result) {
+			this.serverId = serverId;
+			this.txn = txn;
+			this.dataoperation = dataoperation;
+			this.result = result;
+		}
+	}
 
 	/*-- Actor methods -------------------------------------------------------- */
 
@@ -73,7 +88,7 @@ public class Coordinator extends AbstractActor {
 
 	private void OnTxnBeginMsg(TxnBeginMsg msg) {
 		Integer clientId = msg.clientId;
-		log.debug("Coordinator " + coordinatorId + " receives TXN_BEGIN from client " + clientId);
+		log.debug("coordinator" + coordinatorId + "<--[TXN_BEGIN]--client" + clientId);
 		
 		transactions.put(
 				new Txn(coordinatorId, clientId),
@@ -84,7 +99,7 @@ public class Coordinator extends AbstractActor {
 	private void OnReadMsg(TxnClient.ReadMsg msg) {
 		Integer clientId = msg.clientId;
 		Integer key = msg.key;
-		log.debug("Coordinator " + coordinatorId + " receives READ(" + key + ") from client " + clientId);
+		log.debug("coordinator" + coordinatorId + "<--[READ(" + key + ")]--client" + clientId);
 
 		// Set the transaction
 		Txn txn = new Txn(coordinatorId, clientId);
@@ -97,12 +112,13 @@ public class Coordinator extends AbstractActor {
 		getServerByKey(key).tell(new Coordinator.ReadMsg(txn, dataOperation), getSelf());
 	}
 
-	private void OnReadResultMsg(Server.ReadResultMsg msg) {
+	private void OnReadResultMsg(Coordinator.ReadResultMsg msg) {
+		Integer serverId = msg.serverId;
 		Txn txn = msg.txn;
 		DataOperation dataoperation = msg.dataoperation;
 		Integer result = msg.result;
-
-		log.debug("Coordinator " + coordinatorId + " receives READ(" + dataoperation.getKey() + ")="+result+" from server");
+		
+		log.debug("coordinator" + coordinatorId + "<--[READ("+ dataoperation.getKey() +")="+result+"]--server" + serverId);
 		
 		Integer clientId = txn.getClientId();
 		ActorRef client = clients.get(clientId);
@@ -113,7 +129,7 @@ public class Coordinator extends AbstractActor {
 
 	private void OnTxnEndMsg(TxnEndMsg msg) {
 		Integer clientId = msg.clientId;
-		log.debug("Coordinator " + coordinatorId + " receives TXN_END from client " + clientId);
+		log.debug("coordinator" + coordinatorId + "<--[TXN_END]--client" + clientId);
 		getSender().tell(new TxnResultMsg(true), getSelf());
 	}
 
@@ -122,7 +138,7 @@ public class Coordinator extends AbstractActor {
 		return receiveBuilder().match(Coordinator.WelcomeMsg.class, this::onWelcomeMsg)
 				.match(TxnClient.TxnBeginMsg.class, this::OnTxnBeginMsg)
 				.match(TxnClient.ReadMsg.class, this::OnReadMsg)
-				.match(Server.ReadResultMsg.class, this::OnReadResultMsg)
+				.match(Coordinator.ReadResultMsg.class, this::OnReadResultMsg)
 				.match(TxnClient.WriteMsg.class, this::OnWriteMsg)
 				.match(TxnClient.TxnEndMsg.class, this::OnTxnEndMsg).build();
 	}
