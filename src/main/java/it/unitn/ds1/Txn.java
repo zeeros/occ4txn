@@ -37,7 +37,7 @@ public class Txn {
         Txn other = (Txn) obj;
         if (coordinatorId != other.getCoordinatorId())
             return false;
-        if (clientId != other.getCoordinatorId())
+        if (clientId != other.getClientId())
             return false;
         return true;
     }
