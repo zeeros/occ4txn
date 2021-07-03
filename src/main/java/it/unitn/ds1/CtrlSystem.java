@@ -3,56 +3,63 @@ package it.unitn.ds1;
 import java.io.IOException;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
-import it.unitn.ds1.TxnClient.WelcomeMsg;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class CtrlSystem {
-	final static int N_CLIENTS = 6;
-	final static int N_COORDINATORS = 3;
-	final static int N_SERVERS = 3;
-	final static int MAX_KEY = 10;
+	final static int N_CLIENTS = 5;
+	final static int N_COORDINATORS = 2;
+	final static int N_SERVERS = 5;
+	final static int N_KEY_SERVER = 5;
+	final static int MAX_KEY = N_KEY_SERVER * N_SERVERS -1;
 	
-	private static final Logger log= LogManager.getLogger(CtrlSystem.class);
+	private static final Logger log = LogManager.getLogger(CtrlSystem.class);
 
 	public static void main(String[] args) {
 		// Create an actor system named "ctrlakka"
 		final ActorSystem system = ActorSystem.create("ctrlakka");
 
-		// Create multiple Client actors
-		List<ActorRef> group_clients = new ArrayList<>();
+		// Create client actors
+		Map<Integer, ActorRef> clients = new HashMap<Integer,ActorRef >();
 		for (int i = 0; i < N_CLIENTS; i++) {
 			log.debug("Client "+i+" created");
-			group_clients.add(system.actorOf(TxnClient.props(i), "client" + i));
+			clients.put(i, system.actorOf(TxnClient.props(i), "client" + i));
 		}
 
-		// Create multiple Coordinator actors
-		List<ActorRef> group_coordinators = new ArrayList<>();
+		// Create coordinator actors
+		List<ActorRef> coordinators = new ArrayList<ActorRef >();
 		for (int i = 0; i < N_COORDINATORS; i++) {
-			log.debug("Coordinator "+i+" created");
-			group_coordinators.add(system.actorOf(Coordinator.props(i), "coordinator" + i));
+			log.debug("Coordinator "+i+" created");			
+			coordinators.add(system.actorOf(Coordinator.props(i), "coordinator" + i));
 		}
 
 		// Create multiple Server actors
+		Integer k = 0;
+		Map<Integer, ActorRef> servers = new HashMap<Integer,ActorRef >();
 		for (int i = 0; i < N_SERVERS; i++) {
 			log.debug("Server "+i+" created");
 			HashMap<Integer, Integer> datastore = new HashMap<Integer, Integer>();
-			for (int j = 0; j < MAX_KEY; j++) {
-				Integer k = (i * MAX_KEY) + j;
-				datastore.put(k, 10);
+			for (int j = 0; j < N_KEY_SERVER; j++) {
+				datastore.put(k++, 10);
 			}
-			system.actorOf(Server.props(i, datastore), "server" + i);
+			servers.put(i, system.actorOf(Server.props(i, datastore), "server" + i));
 		}
+		
+		// Send welcome messages to clients, coordinators and servers
 
-		// We send the welcome message to the first client
-		WelcomeMsg start = new WelcomeMsg(MAX_KEY, group_coordinators);
-
-		for (ActorRef peer : group_clients) {
-			peer.tell(start, null);
+		TxnClient.WelcomeMsg wClient = new TxnClient.WelcomeMsg(MAX_KEY, coordinators);
+		for (Map.Entry<Integer,ActorRef> entry : clients.entrySet()) {
+			entry.getValue().tell(wClient, null);
+		}
+		
+		Coordinator.WelcomeMsg wCoordinator = new Coordinator.WelcomeMsg(clients, servers, N_KEY_SERVER);
+		for (ActorRef peer : coordinators) {
+			peer.tell(wCoordinator, null);
 		}
 
 		log.info("Press ENTER to exit");
@@ -63,4 +70,5 @@ public class CtrlSystem {
 			system.terminate();
 		}
 	}
+
 }
