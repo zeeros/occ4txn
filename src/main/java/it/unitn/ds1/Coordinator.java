@@ -17,6 +17,7 @@ public class Coordinator extends AbstractActor {
 	private final Integer coordinatorId;
 	private Map<Integer, ActorRef> clients, servers;
 	private Map<Txn, List<DataOperation>> transactions;
+	private Integer N_KEY_SERVER;
 
 	private static final Logger log = LogManager.getLogger(Coordinator.class);
 
@@ -36,10 +37,12 @@ public class Coordinator extends AbstractActor {
 	// clients and the servers
 	public static class WelcomeMsg implements Serializable {
 		public final Map<Integer, ActorRef> clients, servers;
+		public final Integer N_KEY_SERVER;
 
-		public WelcomeMsg(Map<Integer, ActorRef> clients, Map<Integer, ActorRef> servers) {
+		public WelcomeMsg(Map<Integer, ActorRef> clients, Map<Integer, ActorRef> servers, Integer N_KEY_SERVER) {
 			this.clients = Collections.unmodifiableMap(new HashMap<Integer, ActorRef> (clients));
 			this.servers = Collections.unmodifiableMap(new HashMap<Integer, ActorRef> (servers));
+			this.N_KEY_SERVER = N_KEY_SERVER;
 		}
 	}
 
@@ -49,6 +52,17 @@ public class Coordinator extends AbstractActor {
 		public final DataOperation dataoperation;
 
 		public ReadMsg(Txn txn, DataOperation dataoperation) {
+			this.txn = txn;
+			this.dataoperation = dataoperation;
+		}
+	}
+	
+	// WRITE request from the coordinator to the server
+	public static class WriteMsg implements Serializable {
+		public final Txn txn;
+		public final DataOperation dataoperation;
+
+		public WriteMsg(Txn txn, DataOperation dataoperation) {
 			this.txn = txn;
 			this.dataoperation = dataoperation;
 		}
@@ -74,8 +88,7 @@ public class Coordinator extends AbstractActor {
 	// Retrieve the server by inferring its id from the key value
 	// The coordinator is aware of the convention used by the distributed data store
 	private ActorRef getServerByKey(Integer key) {
-		ActorRef server = servers.get(0);
-		return server;
+		return servers.get(key/N_KEY_SERVER);
 	}
 
 	/*-- Message handlers ---------------------------------------------------- - */
@@ -83,6 +96,7 @@ public class Coordinator extends AbstractActor {
 	private void onWelcomeMsg(WelcomeMsg msg) {
 		this.clients = msg.clients;
 		this.servers = msg.servers;
+		this.N_KEY_SERVER = msg.N_KEY_SERVER;
 		this.transactions = new HashMap<Txn, List<DataOperation>>();
 	}
 
@@ -108,7 +122,6 @@ public class Coordinator extends AbstractActor {
 		// Retrieve the transaction for clientId and add append to it the READ operation
 		List<DataOperation> dataoperations = transactions.get(txn);
 		dataoperations.add(dataOperation);
-		// Retrieve the server holding the item by its key
 		getServerByKey(key).tell(new Coordinator.ReadMsg(txn, dataOperation), getSelf());
 	}
 
@@ -125,7 +138,21 @@ public class Coordinator extends AbstractActor {
 		client.tell(new TxnClient.ReadResultMsg(dataoperation.getKey(), result), getSelf());
 	}
 	
-	private void OnWriteMsg(TxnClient.WriteMsg msg) {}
+	private void OnWriteMsg(TxnClient.WriteMsg msg) {
+		Integer clientId = msg.clientId;
+		Integer key = msg.key;
+		Integer value = msg.value;
+		log.debug("coordinator" + coordinatorId + "<--[WRITE(" + key + ")="+value+"]--client" + clientId);
+
+		// Set the transaction
+		Txn txn = new Txn(coordinatorId, clientId);
+		// Set the operation to be add to the transaction
+		DataOperation dataOperation = new DataOperation(DataOperation.Type.WRITE, key, value);
+		// Retrieve the transaction for clientId and append to it the WRITE operation
+		List<DataOperation> dataoperations = transactions.get(txn);
+		dataoperations.add(dataOperation);
+		getServerByKey(key).tell(new Coordinator.WriteMsg(txn, dataOperation), getSelf());
+	}
 
 	private void OnTxnEndMsg(TxnEndMsg msg) {
 		Integer clientId = msg.clientId;

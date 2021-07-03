@@ -43,11 +43,21 @@ public class Server extends AbstractActor {
 		// Respond to the coordinator with the serverId, TXN, its data operation and the value in the datastore
 		getSender().tell(new Coordinator.ReadResultMsg(serverId, txn, dataoperation, value), getSelf());
 	}
+	
+	private void OnWriteMsg(Coordinator.WriteMsg msg) {
+		Txn txn = msg.txn;
+		DataOperation dataoperation = msg.dataoperation;
+		log.debug("server" + serverId + "<--[WRITE(" + dataoperation.getKey() + ")="+dataoperation.getValue()+"]--coordinator" + txn.getCoordinatorId());
+		// Overwrite the data item value
+		datastore.put(dataoperation.getKey(), dataoperation.getValue());
+		// No answer in case of write
+	}
 
 	@Override
 	public Receive createReceive() {
 		return receiveBuilder()
-				.match(Coordinator.ReadMsg.class, this::OnReadMsg).build();
+				.match(Coordinator.ReadMsg.class, this::OnReadMsg)
+				.match(Coordinator.WriteMsg.class, this::OnWriteMsg).build();
 	}
 
 }

@@ -12,10 +12,11 @@ import java.util.List;
 import java.util.Map;
 
 public class CtrlSystem {
-	final static int N_CLIENTS = 2;
+	final static int N_CLIENTS = 5;
 	final static int N_COORDINATORS = 2;
-	final static int N_SERVERS = 2;
-	final static int MAX_KEY = 9;
+	final static int N_SERVERS = 5;
+	final static int N_KEY_SERVER = 5;
+	final static int MAX_KEY = N_KEY_SERVER * N_SERVERS -1;
 	
 	private static final Logger log = LogManager.getLogger(CtrlSystem.class);
 
@@ -38,13 +39,13 @@ public class CtrlSystem {
 		}
 
 		// Create multiple Server actors
+		Integer k = 0;
 		Map<Integer, ActorRef> servers = new HashMap<Integer,ActorRef >();
 		for (int i = 0; i < N_SERVERS; i++) {
 			log.debug("Server "+i+" created");
 			HashMap<Integer, Integer> datastore = new HashMap<Integer, Integer>();
-			for (int j = 0; j <= MAX_KEY; j++) {
-				Integer k = (i * MAX_KEY) + j;
-				datastore.put(k, 10);
+			for (int j = 0; j < N_KEY_SERVER; j++) {
+				datastore.put(k++, 10);
 			}
 			servers.put(i, system.actorOf(Server.props(i, datastore), "server" + i));
 		}
@@ -56,7 +57,7 @@ public class CtrlSystem {
 			entry.getValue().tell(wClient, null);
 		}
 		
-		Coordinator.WelcomeMsg wCoordinator = new Coordinator.WelcomeMsg(clients, servers);
+		Coordinator.WelcomeMsg wCoordinator = new Coordinator.WelcomeMsg(clients, servers, N_KEY_SERVER);
 		for (ActorRef peer : coordinators) {
 			peer.tell(wCoordinator, null);
 		}
@@ -69,4 +70,5 @@ public class CtrlSystem {
 			system.terminate();
 		}
 	}
+
 }
