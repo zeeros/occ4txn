@@ -11,6 +11,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import akka.actor.*;
+import it.unitn.ds1.Server.OverwritingConfirmationMsg;
 import it.unitn.ds1.TxnClient.*;
 
 public class Coordinator extends AbstractActor {

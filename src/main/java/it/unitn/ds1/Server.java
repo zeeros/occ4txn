@@ -45,7 +45,7 @@ public class Server extends AbstractActor {
 	public static class WriteMsg implements Serializable {
 	}
 	
-	public static OverwritingConfirmationMsg implements Serializable{
+	public static class OverwritingConfirmationMsg implements Serializable{
 	}
 	/*-- Message handlers ----------------------------------------------------- */
 
@@ -68,20 +68,20 @@ public class Server extends AbstractActor {
 		PrivateWorkspace pw = privateWorkspaces.get(txn.hashCode());
 		// Retrieve the current version
 		Integer value = dataoperation.getDataItem().getValue();
-		Dataitem dataItemCopy = dataoperation.get(DataItem().getKey());
+		DataItem dataItemCopy = dataoperation.getDataItem();
 		// And increase it
-		dataItemCopy.setVersion(dataItem.getVersion()+1);
-		Integer version = dataItem.getVersion();
+		dataItemCopy.setVersion(dataItemCopy.getVersion()+1);
+		Integer version = dataItemCopy.getVersion();
 		log.debug("server" + serverId + "<--[WRITE(" + dataoperation.getKey() + ")="+value+", version="+version+"]--coordinator" + txn.getCoordinatorId());
 	    if (pw == null) {
 	    	pw = new PrivateWorkspace(txn);
 	    	privateWorkspaces.put(txn.hashCode(), pw);
 	    	//copy of the dataitem that will be temporary stored in the private workspace
 	    	
-			pw.copies.put(dataoperation.getKey(), dataitemCopy);
+			pw.copies.put(dataoperation.getKey(), dataItemCopy);
 	    }
 	    else  {
-	    	pw.copies.put(dataoperation.getKey(), dataitemCopy);
+	    	pw.copies.put(dataoperation.getKey(), dataItemCopy);
 	    }
 	}
 	private void OnTxnValidationMsg(Coordinator.TxnValidationMsg msg) {
