@@ -3,6 +3,7 @@ package it.unitn.ds1;
 public class Txn {
 	private final Integer coordinatorId;
 	private final Integer clientId;
+
 	
 	public Txn(int coordinatorId, int clientId) {
 		this.coordinatorId = coordinatorId;
@@ -16,7 +17,7 @@ public class Txn {
 	public Integer getClientId() {
 		return clientId;
 	}
-	
+
     //Depends only on account number
     @Override
     public int hashCode() {

@@ -3,16 +3,16 @@ package it.unitn.ds1;
 public class DataOperation {
 	private final Type type;
 	private final Integer key;
-	private DataItem dataItem;
+	private final Integer value;
 	
 	public enum Type {
 		READ, WRITE
 	}
 	
-	public DataOperation(Type type, Integer key, DataItem dataItem) {
+	public DataOperation(Type type, Integer key, Integer value) {
 		this.type = type;
 		this.key = key;
-		this.setDataItem(dataItem);
+		this.value = value;
 	}
 
 	public Type getType() {
@@ -23,12 +23,7 @@ public class DataOperation {
 		return key;
 	}
 
-	public DataItem getDataItem() {
-		return dataItem;
+	public Integer getValue() {
+		return value;
 	}
-
-	public void setDataItem(DataItem dataItem) {
-		this.dataItem = dataItem;
-	}
-
 }
