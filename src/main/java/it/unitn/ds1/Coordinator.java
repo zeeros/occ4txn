@@ -46,7 +46,6 @@ public class Coordinator extends AbstractActor {
 		}
 	}
 
-
 	// READ request from the coordinator to the server
 	public static class ReadMsg implements Serializable {
 		public final Txn txn;
@@ -68,6 +67,7 @@ public class Coordinator extends AbstractActor {
 			this.dataoperation = dataoperation;
 		}
 	}
+	
 	// msg from the coordinator to the server to start overwriting the data item accessed by the TXN from the private workspace to the data store
 	public static class TxnValidationMsg implements Serializable {
 		public final Txn txn;
@@ -85,13 +85,11 @@ public class Coordinator extends AbstractActor {
 		public final Integer serverId;
 		public final Txn txn;
 		public final DataOperation dataoperation;
-		public final Integer result;
 
-		public ReadResultMsg(Integer serverId, Txn txn, DataOperation dataoperation, Integer result) {
+		public ReadResultMsg(Integer serverId, Txn txn, DataOperation dataoperation) {
 			this.serverId = serverId;
 			this.txn = txn;
 			this.dataoperation = dataoperation;
-			this.result = result;
 		}
 	}
 
@@ -141,13 +139,12 @@ public class Coordinator extends AbstractActor {
 		Integer serverId = msg.serverId;
 		Txn txn = msg.txn;
 		DataOperation dataoperation = msg.dataoperation;
-		Integer result = msg.result;
 		
-		log.debug("coordinator" + coordinatorId + "<--[READ("+ dataoperation.getKey() +")="+result+"]--server" + serverId);
+		log.debug("coordinator" + coordinatorId + "<--[READ("+ dataoperation.getKey() +")="+dataoperation.getDataItem().getValue()+"]--server" + serverId);
 		
 		Integer clientId = txn.getClientId();
 		ActorRef client = clients.get(clientId);
-		client.tell(new TxnClient.ReadResultMsg(dataoperation.getKey(), result), getSelf());
+		client.tell(new TxnClient.ReadResultMsg(dataoperation.getKey(), dataoperation.getDataItem().getValue()), getSelf());
 	}
 	
 	private void OnWriteMsg(TxnClient.WriteMsg msg) {
@@ -158,10 +155,12 @@ public class Coordinator extends AbstractActor {
 
 		// Set the transaction
 		Txn txn = new Txn(coordinatorId, clientId);
-		// Set the operation to be add to the transaction
-		DataOperation dataOperation = new DataOperation(DataOperation.Type.WRITE, key, value);
-		// Retrieve the transaction for clientId and append to it the WRITE operation
+		// Retrieve the transaction for clientId
 		List<DataOperation> dataoperations = transactions.get(txn);
+		// Set the operation to be add to the transaction
+		DataItem dataItem = new DataItem(null, value);
+		DataOperation dataOperation = new DataOperation(DataOperation.Type.WRITE, key, dataItem);
+		// Append the WRITE operation to the transaction
 		dataoperations.add(dataOperation);
 		getServerByKey(key).tell(new Coordinator.WriteMsg(txn, dataOperation), getSelf());
 	}
