@@ -45,6 +45,8 @@ public class Server extends AbstractActor {
 	public static class WriteMsg implements Serializable {
 	}
 	
+	public static OverwritingConfirmationMsg implements Serializable{
+	}
 	/*-- Message handlers ----------------------------------------------------- */
 
 	private void OnReadMsg(Coordinator.ReadMsg msg) {
@@ -97,6 +99,7 @@ public class Server extends AbstractActor {
 		// We remove the the private workspace from the server either the decision is commit or not
 		privateWorkspaces.remove(txn.hashCode());
 		pw = null;
+	
 	}
 
 	@Override

@@ -165,11 +165,18 @@ public class Coordinator extends AbstractActor {
 		getServerByKey(key).tell(new Coordinator.WriteMsg(txn, dataOperation), getSelf());
 	}
 
+	private void OnOverwritingConfirmationMsg(OverwritingConfirmationMsg msg) {
+		
+		
+	}
+	
 	private void OnTxnEndMsg(TxnEndMsg msg) {
 		Integer clientId = msg.clientId;
 		log.debug("coordinator" + coordinatorId + "<--[TXN_END]--client" + clientId);
 		getSender().tell(new TxnResultMsg(true), getSelf());
 	}
+	
+	
 
 	@Override
 	public Receive createReceive() {
@@ -178,6 +185,7 @@ public class Coordinator extends AbstractActor {
 				.match(TxnClient.ReadMsg.class, this::OnReadMsg)
 				.match(Coordinator.ReadResultMsg.class, this::OnReadResultMsg)
 				.match(TxnClient.WriteMsg.class, this::OnWriteMsg)
+				.match(OverwritingConfirmationMsg.class, this::OnOverwritingConfirmationMsg)
 				.match(TxnClient.TxnEndMsg.class, this::OnTxnEndMsg).build();
 	}
 
