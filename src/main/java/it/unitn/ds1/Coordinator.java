@@ -161,13 +161,14 @@ public class Coordinator extends AbstractActor {
 		// Set the operation to be add to the transaction
 		DataItem dataItem = new DataItem(null, value);
 		DataOperation dataOperation = new DataOperation(DataOperation.Type.WRITE, key, dataItem);
-		// Append the WRITE operation to the transaction
+		// Append the WRITE operation to the transactiong
 		dataoperations.add(dataOperation);
 		getServerByKey(key).tell(new Coordinator.WriteMsg(txn, dataOperation), getSelf());
 	}
 
 	private void OnOverwritingConfirmationMsg(OverwritingConfirmationMsg msg) {
-		
+		Txn txn = msg.txn;
+		txn.overwritesDone = true;
 		
 	}
 	
@@ -175,6 +176,8 @@ public class Coordinator extends AbstractActor {
 		Integer clientId = msg.clientId;
 		log.debug("coordinator" + coordinatorId + "<--[TXN_END]--client" + clientId);
 		getSender().tell(new TxnResultMsg(true), getSelf());
+		//At this stage of the project, the coordinator sends the result = COMMIT directly to the client
+		//In reality, it requires 'before' to check strict serializability with 2PC & to have confirmation that the datastore has been overwriten from the private workspace
 	}
 	
 	
@@ -186,7 +189,7 @@ public class Coordinator extends AbstractActor {
 				.match(TxnClient.ReadMsg.class, this::OnReadMsg)
 				.match(Coordinator.ReadResultMsg.class, this::OnReadResultMsg)
 				.match(TxnClient.WriteMsg.class, this::OnWriteMsg)
-				.match(OverwritingConfirmationMsg.class, this::OnOverwritingConfirmationMsg)
+				.match(Server.OverwritingConfirmationMsg.class, this::OnOverwritingConfirmationMsg)
 				.match(TxnClient.TxnEndMsg.class, this::OnTxnEndMsg).build();
 	}
 

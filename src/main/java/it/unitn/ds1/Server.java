@@ -36,6 +36,7 @@ public class Server extends AbstractActor {
 
 		public PrivateWorkspace(Txn txn) {
 			this.txn = txn;
+			this.copies = new HashMap<Integer, DataItem>();
 		}
 	}
 
@@ -46,6 +47,10 @@ public class Server extends AbstractActor {
 	}
 	
 	public static class OverwritingConfirmationMsg implements Serializable{
+		public final Txn txn;
+		public OverwritingConfirmationMsg(Txn txn) {
+			this.txn = txn;
+		}
 	}
 	/*-- Message handlers ----------------------------------------------------- */
 
@@ -69,8 +74,11 @@ public class Server extends AbstractActor {
 		// Retrieve the current version
 		Integer value = dataoperation.getDataItem().getValue();
 		DataItem dataItemCopy = dataoperation.getDataItem();
+		
+		// we need to retrieve the version of the data item that is wanted to be overwriten
+		DataItem dataItemOriginal = datastore.get(msg.dataoperation.getKey())  ;
 		// And increase it
-		dataItemCopy.setVersion(dataItemCopy.getVersion()+1);
+		dataItemCopy.setVersion(dataItemOriginal.getVersion()+1);
 		Integer version = dataItemCopy.getVersion();
 		log.debug("server" + serverId + "<--[WRITE(" + dataoperation.getKey() + ")="+value+", version="+version+"]--coordinator" + txn.getCoordinatorId());
 	    if (pw == null) {
