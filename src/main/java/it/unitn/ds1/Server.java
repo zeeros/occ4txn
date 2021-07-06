@@ -47,6 +47,16 @@ public class Server extends AbstractActor {
 	public static class WriteMsg implements Serializable {
 	}
 	
+	public static class TxnVoteMsg implements Serializable {
+		private Txn txn;
+		private Boolean vote;
+		public TxnVoteMsg(Txn txn, Boolean vote) {
+			this.txn = txn;
+			this.vote = vote;
+		}
+	}
+	
+	
 
 	/*-- Message handlers ----------------------------------------------------- */
 
@@ -102,6 +112,11 @@ public class Server extends AbstractActor {
 	    	pw.writeCopies.put(dataoperation.getKey(), dataItemCopy);
 	    }
 	}
+	
+	private void OnTxnAskVoteMsg(Coordinator.TxnAskVoteMsg msg) {
+	}
+	
+	
 	private void OnTxnVoteResultMsg(Coordinator.TxnVoteResultMsg msg) {
 		Txn txn = msg.txn;
 		boolean commit = msg.commit;
@@ -126,7 +141,31 @@ public class Server extends AbstractActor {
 		return receiveBuilder()
 				.match(Coordinator.ReadMsg.class, this::OnReadMsg)
 				.match(Coordinator.WriteMsg.class, this::OnWriteMsg)
+				.match(Coordinator.TxnAskVoteMsg.class, this::OnTxnAskVoteMsg)
 				.match(Coordinator.TxnVoteResultMsg.class, this::OnTxnVoteResultMsg).build();
 	}
+	
+    //Depends only on account number
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + serverId;  
+        return result;
+    }
+	
+	@Override
+    public boolean equals(Object obj) {
+		if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        Server other = (Server) obj;
+        if (serverId != other.serverId)
+            return false;
+        return true;
+    }
 
 }

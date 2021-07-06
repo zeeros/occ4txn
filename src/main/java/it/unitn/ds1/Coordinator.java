@@ -4,8 +4,10 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -40,8 +42,8 @@ public class Coordinator extends AbstractActor {
 		public final Integer N_KEY_SERVER;
 
 		public WelcomeMsg(Map<Integer, ActorRef> clients, Map<Integer, ActorRef> servers, Integer N_KEY_SERVER) {
-			this.clients = Collections.unmodifiableMap(new HashMap<Integer, ActorRef> (clients));
-			this.servers = Collections.unmodifiableMap(new HashMap<Integer, ActorRef> (servers));
+			this.clients = Collections.unmodifiableMap(new HashMap<Integer, ActorRef>(clients));
+			this.servers = Collections.unmodifiableMap(new HashMap<Integer, ActorRef>(servers));
 			this.N_KEY_SERVER = N_KEY_SERVER;
 		}
 	}
@@ -56,7 +58,7 @@ public class Coordinator extends AbstractActor {
 			this.dataoperation = dataoperation;
 		}
 	}
-	
+
 	// WRITE request from the coordinator to the server
 	public static class WriteMsg implements Serializable {
 		public final Txn txn;
@@ -67,19 +69,29 @@ public class Coordinator extends AbstractActor {
 			this.dataoperation = dataoperation;
 		}
 	}
-	
-	// msg from the coordinator to the server to start overwriting the data item accessed by the TXN from the private workspace to the data store
+
+	public static class TxnAskVoteMsg implements Serializable {
+		public final Txn txn;
+
+		public TxnAskVoteMsg(Txn txn) {
+			this.txn = txn;
+		}
+
+	}
+
+	// msg from the coordinator to the server to start overwriting the data item
+	// accessed by the TXN from the private workspace to the data store
 	public static class TxnVoteResultMsg implements Serializable {
 		public final Txn txn;
 		public final boolean commit;
-		
+
 		public TxnVoteResultMsg(Txn txn, boolean commit) {
 			this.txn = txn;
 			this.commit = commit;
 		}
-		
+
 	}
-	
+
 	// reply from the server when requested a READ on a given key
 	public static class ReadResultMsg implements Serializable {
 		public final Integer serverId;
@@ -97,39 +109,46 @@ public class Coordinator extends AbstractActor {
 
 	// Retrieve the server by inferring its id from the key value
 	// The coordinator is aware of the convention used by the distributed data store
-	private ActorRef getServerByKey(Integer key) {
-		return servers.get(key/N_KEY_SERVER);
+	private Integer getServerIdByKey(Integer key) {
+		return key / N_KEY_SERVER;
 	}
-	
+
+	private ActorRef getServerByKey(Integer key) {
+		return servers.get(getServerIdByKey(key));
+	}
+
 	private Txn getTxnByClientId(Integer clientId) {
-		for(Txn txn: transactions.keySet()) {
+		for (Txn txn : transactions.keySet()) {
 			Integer clientIdCheck = txn.getClientId();
-			if (clientIdCheck == clientId){
-				return(txn);
+			if (clientIdCheck == clientId) {
+				return (txn);
 			}
 		}
 		return null;
 	}
-	
-	//Sending the message TxnResultMsg to the servers
+
+	// Sending the message TxnResultMsg to the servers
 	private void TxnResultToServers(Txn txn, Boolean commit) {
-		
-			if (txn!=null) {
-			//At this stage of the project, the coordinator sends the result = COMMIT directly to the client
-			//In reality, it requires 'before' to check strict serializability with 2PC & to have confirmation that the datastore has been overwriten from the private workspace
-			//So the commands below have to be modified in the future
-			for (Map.Entry<Integer,ActorRef> entry : servers.entrySet()) {
-			//we tell below to the server to do overwrites
-				entry.getValue().tell(new TxnVoteResultMsg(txn,commit), getSelf());
-				}
+
+		if (txn != null) {
+			// At this stage of the project, the coordinator sends the result = COMMIT
+			// directly to the client
+			// In reality, it requires 'before' to check strict serializability with 2PC &
+			// to have confirmation that the datastore has been overwriten from the private
+			// workspace
+			// So the commands below have to be modified in the future
+			for (Map.Entry<Integer, ActorRef> entry : servers.entrySet()) {
+				// we tell below to the server to do overwrites
+				entry.getValue().tell(new TxnVoteResultMsg(txn, commit), getSelf());
+			}
 			// We assume with no confirmation that overwrites have been done
 			txn.overwritesDone = true;
-			//we tell to the client the result of the Txn, after the over
+			// we tell to the client the result of the Txn, after the over
 			Integer clientId = txn.getClientId();
 			ActorRef client = clients.get(clientId);
 			client.tell(new TxnResultMsg(true), getSelf());
-			
-			}	
+
+		}
 	}
 	/*-- Message handlers ---------------------------------------------------- - */
 
@@ -143,10 +162,8 @@ public class Coordinator extends AbstractActor {
 	private void OnTxnBeginMsg(TxnBeginMsg msg) {
 		Integer clientId = msg.clientId;
 		log.debug("coordinator" + coordinatorId + "<--[TXN_BEGIN]--client" + clientId);
-		
-		transactions.put(
-				new Txn(coordinatorId, clientId),
-				new ArrayList<DataOperation>());
+
+		transactions.put(new Txn(coordinatorId, clientId), new ArrayList<DataOperation>());
 		getSender().tell(new TxnAcceptMsg(), getSelf());
 	}
 
@@ -169,19 +186,21 @@ public class Coordinator extends AbstractActor {
 		Integer serverId = msg.serverId;
 		Txn txn = msg.txn;
 		DataOperation dataoperation = msg.dataoperation;
-		
-		log.debug("coordinator" + coordinatorId + "<--[READ("+ dataoperation.getKey() +")="+dataoperation.getDataItem().getValue()+"]--server" + serverId);
-		
+
+		log.debug("coordinator" + coordinatorId + "<--[READ(" + dataoperation.getKey() + ")="
+				+ dataoperation.getDataItem().getValue() + "]--server" + serverId);
+
 		Integer clientId = txn.getClientId();
 		ActorRef client = clients.get(clientId);
-		client.tell(new TxnClient.ReadResultMsg(dataoperation.getKey(), dataoperation.getDataItem().getValue()), getSelf());
+		client.tell(new TxnClient.ReadResultMsg(dataoperation.getKey(), dataoperation.getDataItem().getValue()),
+				getSelf());
 	}
-	
+
 	private void OnWriteMsg(TxnClient.WriteMsg msg) {
 		Integer clientId = msg.clientId;
 		Integer key = msg.key;
 		Integer value = msg.value;
-		log.debug("coordinator" + coordinatorId + "<--[WRITE(" + key + ")="+value+"]--client" + clientId);
+		log.debug("coordinator" + coordinatorId + "<--[WRITE(" + key + ")=" + value + "]--client" + clientId);
 
 		// Set the transaction
 		Txn txn = new Txn(coordinatorId, clientId);
@@ -190,31 +209,56 @@ public class Coordinator extends AbstractActor {
 		// Set the operation to be add to the transaction
 		DataItem dataItem = new DataItem(null, value);
 		DataOperation dataOperation = new DataOperation(DataOperation.Type.WRITE, key, dataItem);
-		// Append the WRITE operation to the transactiong
+		// Append the WRITE operation to the transaction
 		dataoperations.add(dataOperation);
 		getServerByKey(key).tell(new Coordinator.WriteMsg(txn, dataOperation), getSelf());
 	}
 
+	private void OnTxnVoteMsg(Server.TxnVoteMsg msg) {
+	}
 
-	
 	private void OnTxnEndMsg(TxnEndMsg msg) {
 		Integer clientId = msg.clientId;
 		Boolean commit = msg.commit;
-		if(commit == null)
-			commit = false;
-		log.debug("coordinator" + coordinatorId + "<--[TXN_END="+commit+"]--client" + clientId);
+		log.debug("coordinator" + coordinatorId + "<--[TXN_END=" + commit + "]--client" + clientId);
+
+		// Set the transaction
+		Txn txn = new Txn(coordinatorId, clientId);
+		List<DataOperation> dataoperations = transactions.get(txn);
+		// Retrieve the keys for the data items involved in the transaction
+		Set<Integer> keys = new HashSet<Integer>();
+		for (DataOperation dataOperation : dataoperations) {
+			keys.add(dataOperation.getKey());
+		}
+		// From the keys, retrieve the ids of the servers involved in the transaction
+		Set<Integer> serverIds = new HashSet<Integer>();
+		for (Integer key : keys) {
+			serverIds.add(getServerIdByKey(key));
+		}
+
+		if (commit == true) {
+			// Client wants to commit
+			// Ask a vote to each server
+			for (Integer serverId : serverIds) {
+				getServerByKey(serverId).tell(new Coordinator.TxnAskVoteMsg(txn), getSelf());
+			}
+		} else {
+			// Client wants to abort
+			// Tell to each server to abort
+			for (Integer serverId : serverIds) {
+				getServerByKey(serverId).tell(new Coordinator.TxnVoteResultMsg(txn, false), getSelf());
+			}
+		}
+		
 		getSender().tell(new TxnResultMsg(commit), getSelf());
 	}
-	
-	
 
 	@Override
 	public Receive createReceive() {
 		return receiveBuilder().match(Coordinator.WelcomeMsg.class, this::onWelcomeMsg)
-				.match(TxnClient.TxnBeginMsg.class, this::OnTxnBeginMsg)
-				.match(TxnClient.ReadMsg.class, this::OnReadMsg)
+				.match(TxnClient.TxnBeginMsg.class, this::OnTxnBeginMsg).match(TxnClient.ReadMsg.class, this::OnReadMsg)
 				.match(Coordinator.ReadResultMsg.class, this::OnReadResultMsg)
-				.match(TxnClient.WriteMsg.class, this::OnWriteMsg)
+				.match(Server.TxnVoteMsg.class, this::OnTxnVoteMsg).match(TxnClient.WriteMsg.class, this::OnWriteMsg)
 				.match(TxnClient.TxnEndMsg.class, this::OnTxnEndMsg).build();
 	}
 
