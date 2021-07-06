@@ -15,7 +15,7 @@ public class CtrlSystem {
 	final static int N_CLIENTS = 10;
 	final static int N_COORDINATORS = 10;
 	final static int N_SERVERS = 10;
-	final static int N_KEY_SERVER = 10;
+	final static Integer N_KEY_SERVER = 10;
 	final static int MAX_KEY = N_KEY_SERVER * N_SERVERS - 1;
 
 	private static final Logger log = LogManager.getLogger(CtrlSystem.class);

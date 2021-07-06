@@ -110,7 +110,7 @@ public class Coordinator extends AbstractActor {
 	// Retrieve the server by inferring its id from the key value
 	// The coordinator is aware of the convention used by the distributed data store
 	private Integer getServerIdByKey(Integer key) {
-		return key / N_KEY_SERVER;
+		return (key / N_KEY_SERVER);
 	}
 
 	private ActorRef getServerByKey(Integer key) {
@@ -233,7 +233,8 @@ public class Coordinator extends AbstractActor {
 					serverIds.add(getServerIdByKey(key));
 				}
 				for (Integer serverId : serverIds) {
-					getServerByKey(serverId).tell(new Coordinator.TxnVoteResultMsg(txn, true), getSelf());
+					servers.get(serverId).tell(new Coordinator.TxnVoteResultMsg(txn, true), getSelf());
+					log.debug("Server : "+ serverId + "will receive the final vote result : " + true +"from Server : " + serverId);
 				}
 				// Inform the client
 				getSender().tell(new TxnResultMsg(true), getSelf());
@@ -254,7 +255,8 @@ public class Coordinator extends AbstractActor {
 			// Exclude the current sender (that aborts autonomously)
 			serverIds.remove(msg.serverId);
 			for (Integer serverId : serverIds) {
-				getServerByKey(serverId).tell(new Coordinator.TxnVoteResultMsg(txn, false), getSelf());
+				servers.get(serverId).tell(new Coordinator.TxnVoteResultMsg(txn, false), getSelf());
+				log.debug("Server :"+ serverId + "will receive the final vote result : " + true);
 			}
 			// Inform the client
 			getSender().tell(new TxnResultMsg(false), getSelf());
@@ -284,13 +286,14 @@ public class Coordinator extends AbstractActor {
 			// Client wants to commit
 			// Ask a vote to each server
 			for (Integer serverId : serverIds) {
-				getServerByKey(serverId).tell(new Coordinator.TxnAskVoteMsg(txn), getSelf());
+				
+				servers.get(serverId).tell(new Coordinator.TxnAskVoteMsg(txn), getSelf());
 			}
 		} else {
 			// Client wants to abort
 			// Tell to each server to abort
 			for (Integer serverId : serverIds) {
-				getServerByKey(serverId).tell(new Coordinator.TxnVoteResultMsg(txn, false), getSelf());
+				servers.get(serverId).tell(new Coordinator.TxnVoteResultMsg(txn, false), getSelf());
 			}
 		}
 
@@ -300,9 +303,11 @@ public class Coordinator extends AbstractActor {
 	@Override
 	public Receive createReceive() {
 		return receiveBuilder().match(Coordinator.WelcomeMsg.class, this::onWelcomeMsg)
-				.match(TxnClient.TxnBeginMsg.class, this::OnTxnBeginMsg).match(TxnClient.ReadMsg.class, this::OnReadMsg)
+				.match(TxnClient.TxnBeginMsg.class, this::OnTxnBeginMsg)
+				.match(TxnClient.ReadMsg.class, this::OnReadMsg)
 				.match(Coordinator.ReadResultMsg.class, this::OnReadResultMsg)
-				.match(Server.TxnVoteMsg.class, this::OnTxnVoteMsg).match(TxnClient.WriteMsg.class, this::OnWriteMsg)
+				.match(Server.TxnVoteMsg.class, this::OnTxnVoteMsg)
+				.match(TxnClient.WriteMsg.class, this::OnWriteMsg)
 				.match(TxnClient.TxnEndMsg.class, this::OnTxnEndMsg).build();
 	}
 

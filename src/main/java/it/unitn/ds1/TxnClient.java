@@ -13,7 +13,7 @@ import scala.concurrent.duration.Duration;
 
 public class TxnClient extends AbstractActor {
 	private static final double COMMIT_PROBABILITY = 0.8;
-	private static final double WRITE_PROBABILITY = 0.5;
+	private static final double WRITE_PROBABILITY = 0.7;
 	private static final int MIN_TXN_LENGTH = 20;
 	private static final int MAX_TXN_LENGTH = 40;
 	private static final int RAND_LENGTH_RANGE = MAX_TXN_LENGTH - MIN_TXN_LENGTH + 1;
@@ -287,7 +287,8 @@ public class TxnClient extends AbstractActor {
 		return receiveBuilder().match(WelcomeMsg.class, this::onWelcomeMsg)
 				.match(TxnAcceptMsg.class, this::onTxnAcceptMsg)
 				.match(TxnAcceptTimeoutMsg.class, this::onTxnAcceptTimeoutMsg)
-				.match(ReadResultMsg.class, this::onReadResultMsg).match(TxnResultMsg.class, this::onTxnResultMsg)
+				.match(ReadResultMsg.class, this::onReadResultMsg)
+				.match(TxnResultMsg.class, this::onTxnResultMsg)
 				.match(StopMsg.class, this::onStopMsg).build();
 	}
 }

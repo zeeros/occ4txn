@@ -14,7 +14,7 @@ import org.apache.logging.log4j.Logger;
 public class Server extends AbstractActor {
 	private final Integer serverId;
 //list of every Private Workspaces in the server
-	static Map<Integer, PrivateWorkspace> privateWorkspaces = new HashMap<Integer, PrivateWorkspace>();
+	private Map<Integer, PrivateWorkspace> privateWorkspaces = new HashMap<Integer, PrivateWorkspace>();
 	private static final Logger log = LogManager.getLogger(Server.class);
 
 	// TXN operation (move some amount from a value to another)
@@ -32,16 +32,60 @@ public class Server extends AbstractActor {
 	}
 
 	/*-- Private workspace class ------------------------------------------------------ */
-	public static class PrivateWorkspace {
+	public class PrivateWorkspace {
 		private Txn txn;
 		private HashMap<Integer, DataItem> writeCopies;
 		private HashMap<Integer, DataItem> readCopies;
+		private final Integer serverId;
 
-		public PrivateWorkspace(Txn txn) {
+		public PrivateWorkspace(Txn txn, Integer serverId) {
 			this.txn = txn;
 			this.writeCopies = new HashMap<Integer, DataItem>();
 			this.readCopies = new HashMap<Integer, DataItem>();
+			this.serverId = serverId;
+			
 		}
+		public Integer getServerId() {
+			return serverId;
+		}
+		public Txn getTxn() {
+			return txn;
+		}
+		
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + txn.hashCode() + serverId;
+			return result;
+		}
+		
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			PrivateWorkspace other = (PrivateWorkspace) obj;
+			if (serverId != other.getServerId())
+				return false;
+			if (txn != other.getTxn())
+				return false;
+			return true;
+		}
+
+	}
+	
+	/*-- Actor methods -------------------------------------------------------- */
+	public PrivateWorkspace getPrivateWorkspaceByTxn(Txn txn) {
+		for (Integer pwId: privateWorkspaces.keySet()) {
+			if (privateWorkspaces.get(pwId).txn.hashCode() == txn.hashCode()) {
+				return (privateWorkspaces.get(pwId));
+			}
+		}
+		return null;
 	}
 
 	/*-- Message classes ------------------------------------------------------ */
@@ -69,17 +113,18 @@ public class Server extends AbstractActor {
 		DataOperation dataoperation = msg.dataoperation;
 		// if no private workspace : creation process and write the new data value
 		// within
-		PrivateWorkspace pw = privateWorkspaces.get(txn.hashCode());
+
+		PrivateWorkspace pw = getPrivateWorkspaceByTxn(txn);
 		// Retrieve the current version
 		DataItem dataItemCopy = dataoperation.getDataItem();
 		log.debug("server" + serverId + "<--[READ(" + dataoperation.getKey() + ")]--coordinator"
 				+ txn.getCoordinatorId());
 		if (pw == null) {
-			pw = new PrivateWorkspace(txn);
-			privateWorkspaces.put(txn.hashCode(), pw);
+			PrivateWorkspace newpw = new PrivateWorkspace(txn, serverId);
+			privateWorkspaces.put(newpw.hashCode(), newpw);
 			// copy of the dataitem that will be temporary stored in the private workspace
 
-			pw.readCopies.put(dataoperation.getKey(), dataItemCopy);
+			newpw.readCopies.put(dataoperation.getKey(), dataItemCopy);
 		} else {
 			pw.readCopies.put(dataoperation.getKey(), dataItemCopy);
 		}
@@ -96,26 +141,29 @@ public class Server extends AbstractActor {
 		// if no private workspace : creation process and write the new data value
 		// within
 
-		PrivateWorkspace pw = privateWorkspaces.get(txn.hashCode());
+		PrivateWorkspace pw = getPrivateWorkspaceByTxn(txn);
 		// Retrieve the current version
 		Integer value = dataoperation.getDataItem().getValue();
 		DataItem dataItemCopy = dataoperation.getDataItem();
-
+		
 		// we need to retrieve the version of the data item that is wanted to be
 		// overwriten
 		DataItem dataItemOriginal = datastore.get(msg.dataoperation.getKey());
+		
 		// And increase it
-		dataItemCopy.setVersion(dataItemOriginal.getVersion() + 1);
-		Integer version = dataItemCopy.getVersion();
+		Integer version = dataItemOriginal.getVersion();
+		dataItemCopy.setVersion(version + 1 );
 		log.debug("server" + serverId + "<--[WRITE(" + dataoperation.getKey() + ")=" + value + ", version=" + version
 				+ "]--coordinator" + txn.getCoordinatorId());
 		if (pw == null) {
-			pw = new PrivateWorkspace(txn);
-			privateWorkspaces.put(txn.hashCode(), pw);
+			PrivateWorkspace newpw = new PrivateWorkspace(txn, serverId);
+			privateWorkspaces.put(newpw.hashCode(), newpw);
+		
 			// copy of the dataitem that will be temporary stored in the private workspace
 
-			pw.writeCopies.put(dataoperation.getKey(), dataItemCopy);
+			newpw.writeCopies.put(dataoperation.getKey(), dataItemCopy);
 		} else {
+			
 			pw.writeCopies.put(dataoperation.getKey(), dataItemCopy);
 		}
 	}
@@ -123,30 +171,60 @@ public class Server extends AbstractActor {
 	private void OnTxnAskVoteMsg(Coordinator.TxnAskVoteMsg msg) {
 		Txn txn = msg.txn;
 		// TODO Lock data items
-		// TODO Validate private workspace
-		Boolean validated = true;
+		Boolean vote = true;
+		// Local validation: in the private workspace
+		PrivateWorkspace pw = getPrivateWorkspaceByTxn(txn);
+		
+		
+		
+			if(!(pw==null)) {
+			DataItem dataItemReadCheck, dataItemWriteCheck;
+			//We check below if the version of the data read is the same as the one in the datastore
+			for (Integer dataId: pw.readCopies.keySet()) {
+				dataItemReadCheck = pw.readCopies.get(dataId);
+				if(dataItemReadCheck!=null) {
+					if (!(dataItemReadCheck.getVersion() == datastore.get(dataId).getVersion() && dataItemReadCheck.getValue() == datastore.get(dataId).getValue())) {
+						vote = false;
+					}
+				}
+			}
+		
+		//We check below if the version in the datastore precedes the one in the private workspace
+		for (Integer dataId: pw.writeCopies.keySet()) {
+			dataItemWriteCheck = pw.writeCopies.get(dataId);
+			if(dataItemWriteCheck!=null) {
+				if (!(dataItemWriteCheck.getVersion()==(datastore.get(dataId).getVersion() + 1 ))) {
+					vote = false;
+					}
+				}	
+			}
+		}
+		getSender().tell(new TxnVoteMsg(txn, vote, serverId), getSelf());
+		log.info("ServerId : " + serverId + " -> coordinator : " + getSender() +"(local vote result = " + vote);
 
-		getSender().tell(new Server.TxnVoteMsg(txn, validated, serverId), getSelf());
 	}
+
 
 	private void OnTxnVoteResultMsg(Coordinator.TxnVoteResultMsg msg) {
 		Txn txn = msg.txn;
 		boolean commit = msg.commit;
-		PrivateWorkspace pw = privateWorkspaces.get(txn.hashCode());
+		PrivateWorkspace pw = getPrivateWorkspaceByTxn(txn);
+		
 		// if the message is commit, we replace the dataItem from the private workspace
 		// to the datastore
 		// the msg will be sent to every server so we need to check again if there is a
 		// private workspace
 		if (!(pw == null)) {
 			if (commit) {
-				for (Integer dataid : pw.writeCopies.keySet()) {
-					datastore.replace(dataid, pw.writeCopies.get(dataid));
+				for (Integer dataId : pw.writeCopies.keySet()) {
+					log.info("DataItem(" + dataId + ") =  (value = " + pw.writeCopies.get(dataId).getValue() + ",version = " + pw.writeCopies.get(dataId).getVersion()+" -> replace : (value = " + datastore.get(dataId).getValue() + ",version = " + datastore.get(dataId).getVersion() + ")");
+					datastore.replace(dataId, pw.writeCopies.get(dataId));
 				}
 			}
 
 			// We remove the the private workspace from the server either the decision is
 			// commit or not
-			privateWorkspaces.remove(txn.hashCode());
+			privateWorkspaces.remove(pw.hashCode());
 			pw = null;
 		}
 	}
