@@ -2,6 +2,7 @@ package it.unitn.ds1;
 
 import akka.actor.*;
 import it.unitn.ds1.Server.PrivateWorkspace;
+import it.unitn.ds1.TxnClient.TxnResultMsg;
 
 import java.io.Serializable;
 import java.util.HashMap;
@@ -114,6 +115,12 @@ public class Server extends AbstractActor {
 	}
 	
 	private void OnTxnAskVoteMsg(Coordinator.TxnAskVoteMsg msg) {
+		Txn txn = msg.txn;
+		// TODO Lock data items
+		// TODO Validate private workspace
+		Boolean validated = true;
+		
+		getSender().tell(new Server.TxnVoteMsg(txn,validated), getSelf());
 	}
 	
 	
