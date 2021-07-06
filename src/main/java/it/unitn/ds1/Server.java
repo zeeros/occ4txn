@@ -32,11 +32,12 @@ public class Server extends AbstractActor {
 	/*-- Private workspace class ------------------------------------------------------ */
 	public static class PrivateWorkspace {
 		private Txn txn;
-		private HashMap<Integer, DataItem> copies;
-
+		private HashMap<Integer, DataItem> writeCopies;
+		private HashMap<Integer, DataItem> readCopies;
 		public PrivateWorkspace(Txn txn) {
 			this.txn = txn;
-			this.copies = new HashMap<Integer, DataItem>();
+			this.writeCopies = new HashMap<Integer, DataItem>();
+			this.readCopies = new HashMap<Integer, DataItem>();
 		}
 	}
 
@@ -57,7 +58,21 @@ public class Server extends AbstractActor {
 	private void OnReadMsg(Coordinator.ReadMsg msg) {
 		Txn txn = msg.txn;
 		DataOperation dataoperation = msg.dataoperation;
-		log.debug("server" + serverId + "<--[READ(" + dataoperation.getKey() + ")]--coordinator" + txn.getCoordinatorId());
+		//if no private workspace : creation process and write the new data value within
+				PrivateWorkspace pw = privateWorkspaces.get(txn.hashCode());
+				// Retrieve the current version
+				DataItem dataItemCopy = dataoperation.getDataItem();
+				log.debug("server" + serverId + "<--[READ(" + dataoperation.getKey() + ")]--coordinator" + txn.getCoordinatorId());
+				if (pw == null) {
+			    	pw = new PrivateWorkspace(txn);
+			    	privateWorkspaces.put(txn.hashCode(), pw);
+			    	//copy of the dataitem that will be temporary stored in the private workspace
+			    	
+					pw.readCopies.put(dataoperation.getKey(), dataItemCopy);
+			    }
+			    else  {
+			    	pw.readCopies.put(dataoperation.getKey(), dataItemCopy);
+			    }
 		dataoperation.setDataItem(datastore.get(dataoperation.getKey()));
 		// Respond to the coordinator with the serverId, TXN, its data operation and the value in the datastore
 		getSender().tell(new Coordinator.ReadResultMsg(serverId, txn, dataoperation), getSelf());
@@ -76,7 +91,7 @@ public class Server extends AbstractActor {
 		DataItem dataItemCopy = dataoperation.getDataItem();
 		
 		// we need to retrieve the version of the data item that is wanted to be overwriten
-		DataItem dataItemOriginal = datastore.get(msg.dataoperation.getKey())  ;
+		DataItem dataItemOriginal = datastore.get(msg.dataoperation.getKey());
 		// And increase it
 		dataItemCopy.setVersion(dataItemOriginal.getVersion()+1);
 		Integer version = dataItemCopy.getVersion();
@@ -86,10 +101,10 @@ public class Server extends AbstractActor {
 	    	privateWorkspaces.put(txn.hashCode(), pw);
 	    	//copy of the dataitem that will be temporary stored in the private workspace
 	    	
-			pw.copies.put(dataoperation.getKey(), dataItemCopy);
+			pw.writeCopies.put(dataoperation.getKey(), dataItemCopy);
 	    }
 	    else  {
-	    	pw.copies.put(dataoperation.getKey(), dataItemCopy);
+	    	pw.writeCopies.put(dataoperation.getKey(), dataItemCopy);
 	    }
 	}
 	private void OnTxnValidationMsg(Coordinator.TxnValidationMsg msg) {
@@ -97,17 +112,20 @@ public class Server extends AbstractActor {
 		boolean commit = msg.commit;
 		PrivateWorkspace pw = privateWorkspaces.get(txn.hashCode());
 		//if the message is commit, we replace the dataItem from the private workspace to the datastore
-		if (commit) {
-			for(Integer dataid: pw.copies.keySet()) {
-				datastore.replace(dataid, pw.copies.get(dataid));
-			}	
-	
+		//the msg will be sent to every server so we need to check again if there is a private workspace
+		if (!(pw==null)) {
+			if (commit) {
+				for(Integer dataid: pw.writeCopies.keySet()) {
+					datastore.replace(dataid, pw.writeCopies.get(dataid));
+				}	
+			}
 		
+			// We remove the the private workspace from the server either the decision is commit or not
+			privateWorkspaces.remove(txn.hashCode());
+			pw = null;
+			//we confirm to the coordinator that overwrites have been done
+			getSender().tell(new OverwritingConfirmationMsg(txn), getSender());
 		}
-		// We remove the the private workspace from the server either the decision is commit or not
-		privateWorkspaces.remove(txn.hashCode());
-		pw = null;
-	
 	}
 
 	@Override

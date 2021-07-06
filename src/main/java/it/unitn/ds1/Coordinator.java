@@ -101,7 +101,16 @@ public class Coordinator extends AbstractActor {
 	private ActorRef getServerByKey(Integer key) {
 		return servers.get(key/N_KEY_SERVER);
 	}
-
+	
+	private Txn getTxnByClientId(Integer clientId) {
+		for(Txn txn: transactions.keySet()) {
+			Integer clientIdCheck = txn.getClientId();
+			if (clientIdCheck == clientId){
+				return(txn);
+			}
+		}
+		return null;
+	}
 	/*-- Message handlers ---------------------------------------------------- - */
 
 	private void onWelcomeMsg(WelcomeMsg msg) {
@@ -169,15 +178,31 @@ public class Coordinator extends AbstractActor {
 	private void OnOverwritingConfirmationMsg(OverwritingConfirmationMsg msg) {
 		Txn txn = msg.txn;
 		txn.overwritesDone = true;
+		//we tell to the client the result of the Txn, after the over
+		Integer clientId = txn.getClientId();
+		ActorRef client = clients.get(clientId);
+		client.tell(new TxnResultMsg(true), getSelf());
 		
 	}
 	
 	private void OnTxnEndMsg(TxnEndMsg msg) {
 		Integer clientId = msg.clientId;
+		boolean commit = msg.commit;
 		log.debug("coordinator" + coordinatorId + "<--[TXN_END]--client" + clientId);
-		getSender().tell(new TxnResultMsg(true), getSelf());
-		//At this stage of the project, the coordinator sends the result = COMMIT directly to the client
-		//In reality, it requires 'before' to check strict serializability with 2PC & to have confirmation that the datastore has been overwriten from the private workspace
+		Txn txn = getTxnByClientId(clientId);
+		if (txn!=null) {
+			//At this stage of the project, the coordinator sends the result = COMMIT directly to the client
+			//In reality, it requires 'before' to check strict serializability with 2PC & to have confirmation that the datastore has been overwriten from the private workspace
+			//So the commands below have to be modified in the future
+			for (Map.Entry<Integer,ActorRef> entry : servers.entrySet()) {
+			//we tell below to the server to do overwrites
+				entry.getValue().tell(new TxnValidationMsg(txn,commit), getSelf());
+			}	
+		}	
+		
+		
+		
+
 	}
 	
 	
