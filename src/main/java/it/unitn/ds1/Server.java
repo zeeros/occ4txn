@@ -47,12 +47,7 @@ public class Server extends AbstractActor {
 	public static class WriteMsg implements Serializable {
 	}
 	
-	public static class OverwritingConfirmationMsg implements Serializable{
-		public final Txn txn;
-		public OverwritingConfirmationMsg(Txn txn) {
-			this.txn = txn;
-		}
-	}
+
 	/*-- Message handlers ----------------------------------------------------- */
 
 	private void OnReadMsg(Coordinator.ReadMsg msg) {
@@ -107,7 +102,7 @@ public class Server extends AbstractActor {
 	    	pw.writeCopies.put(dataoperation.getKey(), dataItemCopy);
 	    }
 	}
-	private void OnTxnValidationMsg(Coordinator.TxnValidationMsg msg) {
+	private void OnTxnVoteResultMsg(Coordinator.TxnVoteResultMsg msg) {
 		Txn txn = msg.txn;
 		boolean commit = msg.commit;
 		PrivateWorkspace pw = privateWorkspaces.get(txn.hashCode());
@@ -123,8 +118,6 @@ public class Server extends AbstractActor {
 			// We remove the the private workspace from the server either the decision is commit or not
 			privateWorkspaces.remove(txn.hashCode());
 			pw = null;
-			//we confirm to the coordinator that overwrites have been done
-			getSender().tell(new OverwritingConfirmationMsg(txn), getSender());
 		}
 	}
 
@@ -133,7 +126,7 @@ public class Server extends AbstractActor {
 		return receiveBuilder()
 				.match(Coordinator.ReadMsg.class, this::OnReadMsg)
 				.match(Coordinator.WriteMsg.class, this::OnWriteMsg)
-				.match(Coordinator.TxnValidationMsg.class, this::OnTxnValidationMsg).build();
+				.match(Coordinator.TxnVoteResultMsg.class, this::OnTxnVoteResultMsg).build();
 	}
 
 }

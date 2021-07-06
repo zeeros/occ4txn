@@ -11,7 +11,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import akka.actor.*;
-import it.unitn.ds1.Server.OverwritingConfirmationMsg;
 import it.unitn.ds1.TxnClient.*;
 
 public class Coordinator extends AbstractActor {
@@ -70,11 +69,11 @@ public class Coordinator extends AbstractActor {
 	}
 	
 	// msg from the coordinator to the server to start overwriting the data item accessed by the TXN from the private workspace to the data store
-	public static class TxnValidationMsg implements Serializable {
+	public static class TxnVoteResultMsg implements Serializable {
 		public final Txn txn;
 		public final boolean commit;
 		
-		public TxnValidationMsg(Txn txn, boolean commit) {
+		public TxnVoteResultMsg(Txn txn, boolean commit) {
 			this.txn = txn;
 			this.commit = commit;
 		}
@@ -110,6 +109,27 @@ public class Coordinator extends AbstractActor {
 			}
 		}
 		return null;
+	}
+	
+	//Sending the message TxnResultMsg to the servers
+	private void TxnResultToServers(Txn txn, Boolean commit) {
+		
+			if (txn!=null) {
+			//At this stage of the project, the coordinator sends the result = COMMIT directly to the client
+			//In reality, it requires 'before' to check strict serializability with 2PC & to have confirmation that the datastore has been overwriten from the private workspace
+			//So the commands below have to be modified in the future
+			for (Map.Entry<Integer,ActorRef> entry : servers.entrySet()) {
+			//we tell below to the server to do overwrites
+				entry.getValue().tell(new TxnVoteResultMsg(txn,commit), getSelf());
+				}
+			// We assume with no confirmation that overwrites have been done
+			txn.overwritesDone = true;
+			//we tell to the client the result of the Txn, after the over
+			Integer clientId = txn.getClientId();
+			ActorRef client = clients.get(clientId);
+			client.tell(new TxnResultMsg(true), getSelf());
+			
+			}	
 	}
 	/*-- Message handlers ---------------------------------------------------- - */
 
@@ -175,34 +195,13 @@ public class Coordinator extends AbstractActor {
 		getServerByKey(key).tell(new Coordinator.WriteMsg(txn, dataOperation), getSelf());
 	}
 
-	private void OnOverwritingConfirmationMsg(OverwritingConfirmationMsg msg) {
-		Txn txn = msg.txn;
-		txn.overwritesDone = true;
-		//we tell to the client the result of the Txn, after the over
-		Integer clientId = txn.getClientId();
-		ActorRef client = clients.get(clientId);
-		client.tell(new TxnResultMsg(true), getSelf());
-		
-	}
+
 	
 	private void OnTxnEndMsg(TxnEndMsg msg) {
 		Integer clientId = msg.clientId;
 		boolean commit = msg.commit;
 		log.debug("coordinator" + coordinatorId + "<--[TXN_END]--client" + clientId);
-		Txn txn = getTxnByClientId(clientId);
-		if (txn!=null) {
-			//At this stage of the project, the coordinator sends the result = COMMIT directly to the client
-			//In reality, it requires 'before' to check strict serializability with 2PC & to have confirmation that the datastore has been overwriten from the private workspace
-			//So the commands below have to be modified in the future
-			for (Map.Entry<Integer,ActorRef> entry : servers.entrySet()) {
-			//we tell below to the server to do overwrites
-				entry.getValue().tell(new TxnValidationMsg(txn,commit), getSelf());
-			}	
-		}	
-		
-		
-		
-
+//Nothing happens currently here !
 	}
 	
 	
@@ -214,7 +213,6 @@ public class Coordinator extends AbstractActor {
 				.match(TxnClient.ReadMsg.class, this::OnReadMsg)
 				.match(Coordinator.ReadResultMsg.class, this::OnReadResultMsg)
 				.match(TxnClient.WriteMsg.class, this::OnWriteMsg)
-				.match(Server.OverwritingConfirmationMsg.class, this::OnOverwritingConfirmationMsg)
 				.match(TxnClient.TxnEndMsg.class, this::OnTxnEndMsg).build();
 	}
 
