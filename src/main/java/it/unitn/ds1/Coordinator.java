@@ -215,6 +215,50 @@ public class Coordinator extends AbstractActor {
 	}
 
 	private void OnTxnVoteMsg(Server.TxnVoteMsg msg) {
+		Txn txn = msg.txn;
+		Boolean vote = msg.vote;
+		if (vote) {
+			txn.setVotes(txn.getVotes() + 1);
+			if (txn.getVotes() == servers.size()) {
+				// All vote COMMIT, send the vote result to all servers
+				List<DataOperation> dataoperations = transactions.get(txn);
+				// Retrieve the keys for the data items involved in the transaction
+				Set<Integer> keys = new HashSet<Integer>();
+				for (DataOperation dataOperation : dataoperations) {
+					keys.add(dataOperation.getKey());
+				}
+				// From the keys, retrieve the ids of the servers involved in the transaction
+				Set<Integer> serverIds = new HashSet<Integer>();
+				for (Integer key : keys) {
+					serverIds.add(getServerIdByKey(key));
+				}
+				for (Integer serverId : serverIds) {
+					getServerByKey(serverId).tell(new Coordinator.TxnVoteResultMsg(txn, true), getSelf());
+				}
+				// Inform the client
+				getSender().tell(new TxnResultMsg(true), getSelf());
+			}
+		} else {
+			// ABORT vote, send ABORT result to all
+			List<DataOperation> dataoperations = transactions.get(txn);
+			// Retrieve the keys for the data items involved in the transaction
+			Set<Integer> keys = new HashSet<Integer>();
+			for (DataOperation dataOperation : dataoperations) {
+				keys.add(dataOperation.getKey());
+			}
+			// From the keys, retrieve the ids of the servers involved in the transaction
+			Set<Integer> serverIds = new HashSet<Integer>();
+			for (Integer key : keys) {
+				serverIds.add(getServerIdByKey(key));
+			}
+			// Exclude the current sender (that aborts autonomously)
+			serverIds.remove(msg.serverId);
+			for (Integer serverId : serverIds) {
+				getServerByKey(serverId).tell(new Coordinator.TxnVoteResultMsg(txn, false), getSelf());
+			}
+			// Inform the client
+			getSender().tell(new TxnResultMsg(false), getSelf());
+		}
 	}
 
 	private void OnTxnEndMsg(TxnEndMsg msg) {
@@ -249,7 +293,7 @@ public class Coordinator extends AbstractActor {
 				getServerByKey(serverId).tell(new Coordinator.TxnVoteResultMsg(txn, false), getSelf());
 			}
 		}
-		
+
 		getSender().tell(new TxnResultMsg(commit), getSelf());
 	}
 

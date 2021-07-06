@@ -49,11 +49,13 @@ public class Server extends AbstractActor {
 	}
 	
 	public static class TxnVoteMsg implements Serializable {
-		private Txn txn;
-		private Boolean vote;
-		public TxnVoteMsg(Txn txn, Boolean vote) {
+		public Txn txn;
+		public Boolean vote;
+		public Integer serverId;
+		public TxnVoteMsg(Txn txn, Boolean vote, Integer serverId) {
 			this.txn = txn;
 			this.vote = vote;
+			this.serverId = serverId;
 		}
 	}
 	
@@ -120,7 +122,7 @@ public class Server extends AbstractActor {
 		// TODO Validate private workspace
 		Boolean validated = true;
 		
-		getSender().tell(new Server.TxnVoteMsg(txn,validated), getSelf());
+		getSender().tell(new Server.TxnVoteMsg(txn,validated, serverId), getSelf());
 	}
 	
 	

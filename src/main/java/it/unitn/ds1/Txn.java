@@ -8,11 +8,14 @@ public class Txn {
 	boolean validatedConsistent;
 	//overwriten if all the transient dataItems from the private workspace have been successful
 	boolean overwritesDone;
+	//number of "commit" votes
+	private Integer votes;
 	
 	
 	public Txn(int coordinatorId, int clientId) {
 		this.coordinatorId = coordinatorId;
 		this.clientId = clientId;
+		this.votes = 0;
 	}
 
 	public Integer getCoordinatorId() {
@@ -21,6 +24,14 @@ public class Txn {
 
 	public Integer getClientId() {
 		return clientId;
+	}
+	
+	public Integer getVotes() {
+		return votes;
+	}
+
+	public void setVotes(Integer votes) {
+		this.votes = votes;
 	}
 	
     @Override
