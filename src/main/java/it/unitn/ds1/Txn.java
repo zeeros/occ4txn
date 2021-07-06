@@ -3,6 +3,12 @@ package it.unitn.ds1;
 public class Txn {
 	private final Integer coordinatorId;
 	private final Integer clientId;
+	//indicates the state of the transaction :
+	//validated if the TXN is consistent
+	boolean validatedConsistent;
+	//overwriten if all the transient dataItems from the private workspace have been successful
+	boolean overwritesDone;
+	
 	
 	public Txn(int coordinatorId, int clientId) {
 		this.coordinatorId = coordinatorId;

@@ -68,6 +68,18 @@ public class Coordinator extends AbstractActor {
 		}
 	}
 	
+	// msg from the coordinator to the server to start overwriting the data item accessed by the TXN from the private workspace to the data store
+	public static class TxnVoteResultMsg implements Serializable {
+		public final Txn txn;
+		public final boolean commit;
+		
+		public TxnVoteResultMsg(Txn txn, boolean commit) {
+			this.txn = txn;
+			this.commit = commit;
+		}
+		
+	}
+	
 	// reply from the server when requested a READ on a given key
 	public static class ReadResultMsg implements Serializable {
 		public final Integer serverId;
@@ -88,7 +100,37 @@ public class Coordinator extends AbstractActor {
 	private ActorRef getServerByKey(Integer key) {
 		return servers.get(key/N_KEY_SERVER);
 	}
-
+	
+	private Txn getTxnByClientId(Integer clientId) {
+		for(Txn txn: transactions.keySet()) {
+			Integer clientIdCheck = txn.getClientId();
+			if (clientIdCheck == clientId){
+				return(txn);
+			}
+		}
+		return null;
+	}
+	
+	//Sending the message TxnResultMsg to the servers
+	private void TxnResultToServers(Txn txn, Boolean commit) {
+		
+			if (txn!=null) {
+			//At this stage of the project, the coordinator sends the result = COMMIT directly to the client
+			//In reality, it requires 'before' to check strict serializability with 2PC & to have confirmation that the datastore has been overwriten from the private workspace
+			//So the commands below have to be modified in the future
+			for (Map.Entry<Integer,ActorRef> entry : servers.entrySet()) {
+			//we tell below to the server to do overwrites
+				entry.getValue().tell(new TxnVoteResultMsg(txn,commit), getSelf());
+				}
+			// We assume with no confirmation that overwrites have been done
+			txn.overwritesDone = true;
+			//we tell to the client the result of the Txn, after the over
+			Integer clientId = txn.getClientId();
+			ActorRef client = clients.get(clientId);
+			client.tell(new TxnResultMsg(true), getSelf());
+			
+			}	
+	}
 	/*-- Message handlers ---------------------------------------------------- - */
 
 	private void onWelcomeMsg(WelcomeMsg msg) {
@@ -148,11 +190,13 @@ public class Coordinator extends AbstractActor {
 		// Set the operation to be add to the transaction
 		DataItem dataItem = new DataItem(null, value);
 		DataOperation dataOperation = new DataOperation(DataOperation.Type.WRITE, key, dataItem);
-		// Append the WRITE operation to the transaction
+		// Append the WRITE operation to the transactiong
 		dataoperations.add(dataOperation);
 		getServerByKey(key).tell(new Coordinator.WriteMsg(txn, dataOperation), getSelf());
 	}
 
+
+	
 	private void OnTxnEndMsg(TxnEndMsg msg) {
 		Integer clientId = msg.clientId;
 		Boolean commit = msg.commit;
@@ -161,6 +205,8 @@ public class Coordinator extends AbstractActor {
 		log.debug("coordinator" + coordinatorId + "<--[TXN_END="+commit+"]--client" + clientId);
 		getSender().tell(new TxnResultMsg(commit), getSelf());
 	}
+	
+	
 
 	@Override
 	public Receive createReceive() {
