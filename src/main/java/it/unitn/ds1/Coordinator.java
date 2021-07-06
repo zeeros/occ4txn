@@ -199,9 +199,11 @@ public class Coordinator extends AbstractActor {
 	
 	private void OnTxnEndMsg(TxnEndMsg msg) {
 		Integer clientId = msg.clientId;
-		boolean commit = msg.commit;
-		log.debug("coordinator" + coordinatorId + "<--[TXN_END]--client" + clientId);
-//Nothing happens currently here !
+		Boolean commit = msg.commit;
+		if(commit == null)
+			commit = false;
+		log.debug("coordinator" + coordinatorId + "<--[TXN_END="+commit+"]--client" + clientId);
+		getSender().tell(new TxnResultMsg(commit), getSelf());
 	}
 	
 	
