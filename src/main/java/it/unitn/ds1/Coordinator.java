@@ -234,7 +234,8 @@ public class Coordinator extends AbstractActor {
 				}
 				for (Integer serverId : serverIds) {
 					servers.get(serverId).tell(new Coordinator.TxnVoteResultMsg(txn, true), getSelf());
-					log.debug("Server : "+ serverId + "will receive the final vote result : " + true +"from Server : " + serverId);
+					log.debug("Server : " + serverId + "will receive the final vote result : " + true + "from Server : "
+							+ serverId);
 				}
 				// Inform the client
 				getSender().tell(new TxnResultMsg(true), getSelf());
@@ -256,7 +257,7 @@ public class Coordinator extends AbstractActor {
 			serverIds.remove(msg.serverId);
 			for (Integer serverId : serverIds) {
 				servers.get(serverId).tell(new Coordinator.TxnVoteResultMsg(txn, false), getSelf());
-				log.debug("Server :"+ serverId + "will receive the final vote result : " + true);
+				log.debug("Server :" + serverId + "will receive the final vote result : " + true);
 			}
 			// Inform the client
 			getSender().tell(new TxnResultMsg(false), getSelf());
@@ -286,7 +287,7 @@ public class Coordinator extends AbstractActor {
 			// Client wants to commit
 			// Ask a vote to each server
 			for (Integer serverId : serverIds) {
-				
+
 				servers.get(serverId).tell(new Coordinator.TxnAskVoteMsg(txn), getSelf());
 			}
 		} else {
@@ -303,11 +304,9 @@ public class Coordinator extends AbstractActor {
 	@Override
 	public Receive createReceive() {
 		return receiveBuilder().match(Coordinator.WelcomeMsg.class, this::onWelcomeMsg)
-				.match(TxnClient.TxnBeginMsg.class, this::OnTxnBeginMsg)
-				.match(TxnClient.ReadMsg.class, this::OnReadMsg)
+				.match(TxnClient.TxnBeginMsg.class, this::OnTxnBeginMsg).match(TxnClient.ReadMsg.class, this::OnReadMsg)
 				.match(Coordinator.ReadResultMsg.class, this::OnReadResultMsg)
-				.match(Server.TxnVoteMsg.class, this::OnTxnVoteMsg)
-				.match(TxnClient.WriteMsg.class, this::OnWriteMsg)
+				.match(Server.TxnVoteMsg.class, this::OnTxnVoteMsg).match(TxnClient.WriteMsg.class, this::OnWriteMsg)
 				.match(TxnClient.TxnEndMsg.class, this::OnTxnEndMsg).build();
 	}
 

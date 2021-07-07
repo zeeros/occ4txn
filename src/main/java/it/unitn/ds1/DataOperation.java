@@ -4,11 +4,11 @@ public class DataOperation {
 	private final Type type;
 	private final Integer key;
 	private DataItem dataItem;
-	
+
 	public enum Type {
 		READ, WRITE
 	}
-	
+
 	public DataOperation(Type type, Integer key, DataItem dataItem) {
 		this.type = type;
 		this.key = key;
