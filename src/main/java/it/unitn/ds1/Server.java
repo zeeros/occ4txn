@@ -194,8 +194,8 @@ public class Server extends AbstractActor {
 						//Set the lock for the current item
 						datastore.get(dataId).setLock(txn.hashCode());
 					}
-					if (!(dataItemReadCheck.getVersion() != datastore.get(dataId).getVersion() &&
-							dataItemReadCheck.getValue() == datastore.get(dataId).getValue())) {
+					if (dataItemReadCheck.getVersion() != datastore.get(dataId).getVersion() ||
+							dataItemReadCheck.getValue() != datastore.get(dataId).getValue()) {
 						vote = false;
 					}
 				}
