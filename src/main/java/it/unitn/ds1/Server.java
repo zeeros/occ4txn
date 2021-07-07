@@ -118,6 +118,7 @@ public class Server extends AbstractActor {
 
 		PrivateWorkspace pw = getPrivateWorkspaceByTxn(txn);
 		// Retrieve the current version
+		dataoperation.setDataItem(datastore.get(dataoperation.getKey()));
 		DataItem dataItemCopy = dataoperation.getDataItem();
 		log.debug("server" + serverId + "<--[READ(" + dataoperation.getKey() + ")]--coordinator"
 				+ txn.getCoordinatorId());
@@ -130,7 +131,7 @@ public class Server extends AbstractActor {
 		} else {
 			pw.readCopies.put(dataoperation.getKey(), dataItemCopy);
 		}
-		dataoperation.setDataItem(datastore.get(dataoperation.getKey()));
+		
 		// Respond to the coordinator with the serverId, TXN, its data operation and the
 		// value in the datastore
 		getSender().tell(new Coordinator.ReadResultMsg(serverId, txn, dataoperation), getSelf());
