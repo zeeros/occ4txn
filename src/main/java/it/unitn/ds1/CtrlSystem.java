@@ -20,7 +20,7 @@ public class CtrlSystem {
 
 	private static final Logger log = LogManager.getLogger(CtrlSystem.class);
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws InterruptedException {
 		// Create an actor system named "ctrlakka"
 		final ActorSystem system = ActorSystem.create("ctrlakka");
 
@@ -61,7 +61,9 @@ public class CtrlSystem {
 		for (ActorRef peer : coordinators) {
 			peer.tell(wCoordinator, null);
 		}
-
+	
+		
+		
 		log.info("Press ENTER to exit");
 		try {
 			System.in.read();
@@ -69,6 +71,19 @@ public class CtrlSystem {
 		} finally {
 			system.terminate();
 		}
+		
+		
+		//the server to check the sum
+		Integer iterator = 25;
+		while(iterator > 0) {
+			for (Map.Entry<Integer, ActorRef> entry : servers.entrySet()) {
+				entry.getValue().tell(new Server.LocalSumCheckMsg(), null);
+			}
+			Thread.sleep(2000);
+			iterator-=1;
+			
+		}
+		
 	}
 
 }

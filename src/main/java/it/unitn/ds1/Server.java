@@ -93,6 +93,10 @@ public class Server extends AbstractActor {
 	/*-- Message classes ------------------------------------------------------ */
 
 	// WRITE request from the coordinator to the server
+	public static class LocalSumCheckMsg implements Serializable{
+		
+	}
+	
 	public static class WriteMsg implements Serializable {
 	}
 
@@ -253,6 +257,9 @@ public class Server extends AbstractActor {
 			privateWorkspaces.remove(pw.hashCode());
 			pw = null;
 		}
+	
+		
+
 		
 		// Release the locks set by the current transaction over all the data items
 		for (Map.Entry<Integer,DataItem> entry : datastore.entrySet()) {
@@ -262,12 +269,22 @@ public class Server extends AbstractActor {
 			}
 		}
 	}
+	
+	//Behavior when receiving a sum request 
+	private void OnLocalSumCheckMsg(LocalSumCheckMsg msg) {
+		Integer localSum = 0;
+		for (Integer dataId: datastore.keySet()) {
+			localSum+=datastore.get(dataId).getValue();
+		}
+		log.debug("localSum of the server :" + serverId + "equals : " + localSum);
+	}
 
 	@Override
 	public Receive createReceive() {
 		return receiveBuilder().match(Coordinator.ReadMsg.class, this::OnReadMsg)
 				.match(Coordinator.WriteMsg.class, this::OnWriteMsg)
 				.match(Coordinator.TxnAskVoteMsg.class, this::OnTxnAskVoteMsg)
+				.match(LocalSumCheckMsg.class, this::OnLocalSumCheckMsg)
 				.match(Coordinator.TxnVoteResultMsg.class, this::OnTxnVoteResultMsg).build();
 	}
 
@@ -292,6 +309,9 @@ public class Server extends AbstractActor {
 		if (serverId != other.serverId)
 			return false;
 		return true;
+	}
+
+	private <P extends Object> void OnLocalSumCheckMsg(P p1) {
 	}
 
 }
