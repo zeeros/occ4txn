@@ -222,14 +222,6 @@ public class Server extends AbstractActor {
 			}
 		}
 		
-		// Release the locks set by the current transaction over all the data items
-		for (Map.Entry<Integer,DataItem> entry : datastore.entrySet()) {
-			Integer lock = entry.getValue().getLock();
-			if(lock != null && lock == txn.hashCode()) {
-				entry.getValue().setLock(null);
-			}
-		}
-		
 		getSender().tell(new TxnVoteMsg(txn, vote, serverId), getSelf());
 		log.info("ServerId : " + serverId + " -> coordinator : " + getSender() + "(local vote result = " + vote);
 
@@ -259,6 +251,14 @@ public class Server extends AbstractActor {
 			// commit or not
 			privateWorkspaces.remove(pw.hashCode());
 			pw = null;
+		}
+		
+		// Release the locks set by the current transaction over all the data items
+		for (Map.Entry<Integer,DataItem> entry : datastore.entrySet()) {
+			Integer lock = entry.getValue().getLock();
+			if(lock != null && lock == txn.hashCode()) {
+				entry.getValue().setLock(null);
+			}
 		}
 	}
 
