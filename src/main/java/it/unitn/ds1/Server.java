@@ -172,10 +172,10 @@ public class Server extends AbstractActor {
 
 	private void OnTxnAskVoteMsg(Coordinator.TxnAskVoteMsg msg) {
 		Txn txn = msg.txn;
-		// TODO Lock data items
 		Boolean vote = true;
 		// Local validation: in the private workspace
 		PrivateWorkspace pw = getPrivateWorkspaceByTxn(txn);
+		
 
 		if (!(pw == null)) {
 			DataItem dataItemReadCheck, dataItemWriteCheck;
@@ -184,8 +184,18 @@ public class Server extends AbstractActor {
 			for (Integer dataId : pw.readCopies.keySet()) {
 				dataItemReadCheck = pw.readCopies.get(dataId);
 				if (dataItemReadCheck != null) {
-					if (!(dataItemReadCheck.getVersion() == datastore.get(dataId).getVersion()
-							&& dataItemReadCheck.getValue() == datastore.get(dataId).getValue())) {
+					// Get the lock for the current data item
+					Integer lock = datastore.get(dataId).getLock();
+					// Check if item is locked by another transaction
+					// if so, cast an ABORT vote
+					if(lock != null && lock != txn.hashCode()) {
+						vote = false;
+					} else {
+						//Set the lock for the current item
+						datastore.get(dataId).setLock(txn.hashCode());
+					}
+					if (!(dataItemReadCheck.getVersion() != datastore.get(dataId).getVersion() &&
+							dataItemReadCheck.getValue() == datastore.get(dataId).getValue())) {
 						vote = false;
 					}
 				}
@@ -196,12 +206,30 @@ public class Server extends AbstractActor {
 			for (Integer dataId : pw.writeCopies.keySet()) {
 				dataItemWriteCheck = pw.writeCopies.get(dataId);
 				if (dataItemWriteCheck != null) {
+					// Check if item is locked by another transaction
+					// if so, cast an ABORT vote
+					Integer lock = datastore.get(dataId).getLock();
+					if(lock != null && lock != txn.hashCode()) {
+						vote = false;
+					} else {
+						//Set the lock for the current item
+						datastore.get(dataId).setLock(txn.hashCode());
+					}
 					if (!(dataItemWriteCheck.getVersion() == (datastore.get(dataId).getVersion() + 1))) {
 						vote = false;
 					}
 				}
 			}
 		}
+		
+		// Release the locks set by the current transaction over all the data items
+		for (Map.Entry<Integer,DataItem> entry : datastore.entrySet()) {
+			Integer lock = entry.getValue().getLock();
+			if(lock != null && lock == txn.hashCode()) {
+				entry.getValue().setLock(null);
+			}
+		}
+		
 		getSender().tell(new TxnVoteMsg(txn, vote, serverId), getSelf());
 		log.info("ServerId : " + serverId + " -> coordinator : " + getSender() + "(local vote result = " + vote);
 

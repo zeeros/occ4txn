@@ -3,6 +3,7 @@ package it.unitn.ds1;
 public class DataItem {
 	private Integer version;
 	private Integer value;
+	private Integer lock;
 
 	public DataItem(Integer version, Integer value) {
 		this.version = version;
@@ -24,4 +25,13 @@ public class DataItem {
 	public void setValue(Integer value) {
 		this.value = value;
 	}
+
+	public Integer getLock() {
+		return lock;
+	}
+
+	public void setLock(Integer lock) {
+		this.lock = lock;
+	}
+
 }
