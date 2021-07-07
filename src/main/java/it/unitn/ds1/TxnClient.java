@@ -287,8 +287,7 @@ public class TxnClient extends AbstractActor {
 		return receiveBuilder().match(WelcomeMsg.class, this::onWelcomeMsg)
 				.match(TxnAcceptMsg.class, this::onTxnAcceptMsg)
 				.match(TxnAcceptTimeoutMsg.class, this::onTxnAcceptTimeoutMsg)
-				.match(ReadResultMsg.class, this::onReadResultMsg)
-				.match(TxnResultMsg.class, this::onTxnResultMsg)
+				.match(ReadResultMsg.class, this::onReadResultMsg).match(TxnResultMsg.class, this::onTxnResultMsg)
 				.match(StopMsg.class, this::onStopMsg).build();
 	}
 }
