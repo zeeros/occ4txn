@@ -92,10 +92,7 @@ public class Server extends AbstractActor {
 
 	/*-- Message classes ------------------------------------------------------ */
 
-	// WRITE request from the coordinator to the server
-	public static class LocalSumCheckMsg implements Serializable{
-		
-	}
+
 	
 	public static class WriteMsg implements Serializable {
 	}
@@ -209,8 +206,8 @@ public class Server extends AbstractActor {
 						//Set the lock for the current item
 						datastore.get(dataId).setLock(txn.hashCode());
 					}
-					if (!(dataItemReadCheck.getVersion() != datastore.get(dataId).getVersion() &&
-							dataItemReadCheck.getValue() == datastore.get(dataId).getValue())) {
+					if (dataItemReadCheck.getVersion() != datastore.get(dataId).getVersion() ||
+							dataItemReadCheck.getValue() != datastore.get(dataId).getValue()) {
 						vote = false;
 					}
 				}
@@ -290,7 +287,6 @@ public class Server extends AbstractActor {
 		return receiveBuilder().match(Coordinator.ReadMsg.class, this::OnReadMsg)
 				.match(Coordinator.WriteMsg.class, this::OnWriteMsg)
 				.match(Coordinator.TxnAskVoteMsg.class, this::OnTxnAskVoteMsg)
-				.match(LocalSumCheckMsg.class, this::OnLocalSumCheckMsg)
 				.match(Coordinator.TxnVoteResultMsg.class, this::OnTxnVoteResultMsg)
 				.match(ConsistencyTester.GoodbyeMsg.class, this::OnGoodbyeMsg).build();
 	}
