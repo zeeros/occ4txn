@@ -111,6 +111,16 @@ public class Server extends AbstractActor {
 			this.serverId = serverId;
 		}
 	}
+	
+	public static class GoodbyeMsg implements Serializable {
+		public int serverId;
+		public Map<Integer, DataItem> datastore;
+
+		public GoodbyeMsg(int serverId, Map<Integer, DataItem> datastore) {
+			this.serverId = serverId;
+			this.datastore = datastore;
+		}
+	}
 
 	/*-- Message handlers ----------------------------------------------------- */
 
@@ -270,13 +280,9 @@ public class Server extends AbstractActor {
 		}
 	}
 	
-	//Behavior when receiving a sum request 
-	private void OnLocalSumCheckMsg(LocalSumCheckMsg msg) {
-		Integer localSum = 0;
-		for (Integer dataId: datastore.keySet()) {
-			localSum+=datastore.get(dataId).getValue();
-		}
-		log.debug("localSum of the server :" + serverId + "equals : " + localSum);
+	
+	private void OnGoodbyeMsg(ConsistencyTester.GoodbyeMsg msg) {
+		getSender().tell(new Server.GoodbyeMsg(serverId, datastore), getSelf());
 	}
 
 	@Override
@@ -285,7 +291,8 @@ public class Server extends AbstractActor {
 				.match(Coordinator.WriteMsg.class, this::OnWriteMsg)
 				.match(Coordinator.TxnAskVoteMsg.class, this::OnTxnAskVoteMsg)
 				.match(LocalSumCheckMsg.class, this::OnLocalSumCheckMsg)
-				.match(Coordinator.TxnVoteResultMsg.class, this::OnTxnVoteResultMsg).build();
+				.match(Coordinator.TxnVoteResultMsg.class, this::OnTxnVoteResultMsg)
+				.match(ConsistencyTester.GoodbyeMsg.class, this::OnGoodbyeMsg).build();
 	}
 
 	// Depends only on account number
