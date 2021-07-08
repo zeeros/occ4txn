@@ -55,7 +55,6 @@ public class ConsistencyTester extends AbstractActor{
 
 	private void OnGoodbyeMsg(ConsistencyTester.GoodbyeMsg msg) {
 		log.debug("OnGoodbyeMsg from CtrlSystem");
-		// TODO for each server, send a message asking for the data store
 		for (Map.Entry<Integer, ActorRef> entry : servers.entrySet()) {
 			// we tell below to the server to do overwrites
 			entry.getValue().tell(new ConsistencyTester.GoodbyeMsg(), getSelf());
@@ -66,7 +65,9 @@ public class ConsistencyTester extends AbstractActor{
 		log.debug("OnGoodbyeMsg from Server"+msg.serverId);
 		server_replies++;
 		// TODO get the data store of the server
-		// if we have all the data stores, then check the consistency
+		if(server_replies == servers.size()) {
+			// TODO if we have all the data stores, then check the consistency
+		}
 	}
 
 	@Override
