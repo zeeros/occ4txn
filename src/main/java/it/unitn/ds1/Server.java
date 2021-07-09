@@ -92,7 +92,8 @@ public class Server extends AbstractActor {
 
 	/*-- Message classes ------------------------------------------------------ */
 
-	// WRITE request from the coordinator to the server
+
+	
 	public static class WriteMsg implements Serializable {
 	}
 
@@ -107,6 +108,16 @@ public class Server extends AbstractActor {
 			this.serverId = serverId;
 		}
 	}
+	
+	public static class GoodbyeMsg implements Serializable {
+		public int serverId;
+		public Map<Integer, DataItem> datastore;
+
+		public GoodbyeMsg(int serverId, Map<Integer, DataItem> datastore) {
+			this.serverId = serverId;
+			this.datastore = datastore;
+		}
+	}
 
 	/*-- Message handlers ----------------------------------------------------- */
 
@@ -118,6 +129,7 @@ public class Server extends AbstractActor {
 
 		PrivateWorkspace pw = getPrivateWorkspaceByTxn(txn);
 		// Retrieve the current version
+		dataoperation.setDataItem(datastore.get(dataoperation.getKey()));
 		DataItem dataItemCopy = dataoperation.getDataItem();
 		log.debug("server" + serverId + "<--[READ(" + dataoperation.getKey() + ")]--coordinator"
 				+ txn.getCoordinatorId());
@@ -130,7 +142,7 @@ public class Server extends AbstractActor {
 		} else {
 			pw.readCopies.put(dataoperation.getKey(), dataItemCopy);
 		}
-		dataoperation.setDataItem(datastore.get(dataoperation.getKey()));
+		
 		// Respond to the coordinator with the serverId, TXN, its data operation and the
 		// value in the datastore
 		getSender().tell(new Coordinator.ReadResultMsg(serverId, txn, dataoperation), getSelf());
@@ -194,8 +206,8 @@ public class Server extends AbstractActor {
 						//Set the lock for the current item
 						datastore.get(dataId).setLock(txn.hashCode());
 					}
-					if (!(dataItemReadCheck.getVersion() != datastore.get(dataId).getVersion() &&
-							dataItemReadCheck.getValue() == datastore.get(dataId).getValue())) {
+					if (dataItemReadCheck.getVersion() != datastore.get(dataId).getVersion() ||
+							dataItemReadCheck.getValue() != datastore.get(dataId).getValue()) {
 						vote = false;
 					}
 				}
@@ -252,6 +264,9 @@ public class Server extends AbstractActor {
 			privateWorkspaces.remove(pw.hashCode());
 			pw = null;
 		}
+	
+		
+
 		
 		// Release the locks set by the current transaction over all the data items
 		for (Map.Entry<Integer,DataItem> entry : datastore.entrySet()) {
@@ -261,13 +276,19 @@ public class Server extends AbstractActor {
 			}
 		}
 	}
+	
+	
+	private void OnGoodbyeMsg(ConsistencyTester.GoodbyeMsg msg) {
+		getSender().tell(new Server.GoodbyeMsg(serverId, datastore), getSelf());
+	}
 
 	@Override
 	public Receive createReceive() {
 		return receiveBuilder().match(Coordinator.ReadMsg.class, this::OnReadMsg)
 				.match(Coordinator.WriteMsg.class, this::OnWriteMsg)
 				.match(Coordinator.TxnAskVoteMsg.class, this::OnTxnAskVoteMsg)
-				.match(Coordinator.TxnVoteResultMsg.class, this::OnTxnVoteResultMsg).build();
+				.match(Coordinator.TxnVoteResultMsg.class, this::OnTxnVoteResultMsg)
+				.match(ConsistencyTester.GoodbyeMsg.class, this::OnGoodbyeMsg).build();
 	}
 
 	// Depends only on account number
@@ -291,6 +312,9 @@ public class Server extends AbstractActor {
 		if (serverId != other.serverId)
 			return false;
 		return true;
+	}
+
+	private <P extends Object> void OnLocalSumCheckMsg(P p1) {
 	}
 
 }

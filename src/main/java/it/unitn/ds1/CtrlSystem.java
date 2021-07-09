@@ -1,5 +1,6 @@
 package it.unitn.ds1;
 
+
 import java.io.IOException;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
@@ -15,12 +16,13 @@ public class CtrlSystem {
 	final static int N_CLIENTS = 10;
 	final static int N_COORDINATORS = 10;
 	final static int N_SERVERS = 10;
-	final static Integer N_KEY_SERVER = 10;
+	final static int N_KEY_SERVER = 10;
 	final static int MAX_KEY = N_KEY_SERVER * N_SERVERS - 1;
+	final static int INIT_ITEM_VALUE = 100;
 
 	private static final Logger log = LogManager.getLogger(CtrlSystem.class);
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws InterruptedException {
 		// Create an actor system named "ctrlakka"
 		final ActorSystem system = ActorSystem.create("ctrlakka");
 
@@ -45,10 +47,14 @@ public class CtrlSystem {
 			log.debug("Server " + i + " created");
 			HashMap<Integer, DataItem> datastore = new HashMap<Integer, DataItem>();
 			for (int j = 0; j < N_KEY_SERVER; j++) {
-				datastore.put(k++, new DataItem(0, 100));
+				datastore.put(k++, new DataItem(0, INIT_ITEM_VALUE));
 			}
 			servers.put(i, system.actorOf(Server.props(i, datastore), "server" + i));
 		}
+		
+		// The consistency tester is used to check if the distributed data store has a consistent state
+		
+		ActorRef consistencyTester = system.actorOf(ConsistencyTester.props(0), "consistencyTester");
 
 		// Send welcome messages to clients, coordinators and servers
 
@@ -61,14 +67,25 @@ public class CtrlSystem {
 		for (ActorRef peer : coordinators) {
 			peer.tell(wCoordinator, null);
 		}
-
+		
+		consistencyTester.tell(new ConsistencyTester.WelcomeMsg(servers, N_KEY_SERVER, INIT_ITEM_VALUE), null);	
+		
 		log.info("Press ENTER to exit");
 		try {
 			System.in.read();
 		} catch (IOException ioe) {
 		} finally {
+			// Stop all the clients
+			for (Map.Entry<Integer, ActorRef> entry : clients.entrySet()) {
+				entry.getValue().tell(new TxnClient.StopMsg(), null);
+			}
+			Thread.sleep(1000);
+			consistencyTester.tell(new ConsistencyTester.GoodbyeMsg(), null);
+			// Wait for the consistency tester to check the data stores
+			Thread.sleep(1000);
 			system.terminate();
 		}
+		
 	}
 
 }
