@@ -63,7 +63,7 @@ public class ConsistencyTester extends AbstractActor{
 	}
 	
 	private void OnGoodbyeMsg(Server.GoodbyeMsg msg) {
-	log.debug("OnGoodbyeMsg from Server "+msg.serverId);
+		log.debug("OnGoodbyeMsg from Server "+msg.serverId);
 		server_replies++;
 		Integer serverId = msg.serverId;
 		// TODO get the data store of the server
@@ -78,7 +78,7 @@ public class ConsistencyTester extends AbstractActor{
 			log.debug("Total values : "+ counter_values + "; server_replies = " + server_replies );
 			
 			// TODO if we have all the data stores, then check the consistency
-		}	
+		}
 	}
 
 	@Override

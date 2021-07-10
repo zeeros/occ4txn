@@ -38,7 +38,7 @@ public class Txn {
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + coordinatorId + clientId;
+		result = prime * result + 100 * coordinatorId + clientId;
 		return result;
 	}
 
