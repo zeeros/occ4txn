@@ -280,7 +280,7 @@ public class TxnClient extends AbstractActor {
 					+ numAttemptedTxn + ")]");
 		}
 //only one txn test (temporary)		
-//		beginTxn();
+		beginTxn();
 	}
 
 	@Override

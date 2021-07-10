@@ -13,9 +13,9 @@ import java.util.List;
 import java.util.Map;
 
 public class CtrlSystem {
-	final static int N_CLIENTS = 1;
+	final static int N_CLIENTS = 4;
 	final static int N_COORDINATORS = 10;
-	final static int N_SERVERS = 1;
+	final static int N_SERVERS = 10;
 	final static int N_KEY_SERVER = 10;
 	final static int MAX_KEY = N_KEY_SERVER * N_SERVERS - 1;
 	final static int INIT_ITEM_VALUE = 100;
@@ -47,7 +47,9 @@ public class CtrlSystem {
 			log.debug("Server " + i + " created");
 			HashMap<Integer, DataItem> datastore = new HashMap<Integer, DataItem>();
 			for (int j = 0; j < N_KEY_SERVER; j++) {
-				datastore.put(k++, new DataItem(0, INIT_ITEM_VALUE));
+				DataItem dataItem = new DataItem(0,INIT_ITEM_VALUE);
+				dataItem.setLock(null);
+				datastore.put(k++, dataItem);
 			}
 			servers.put(i, system.actorOf(Server.props(i, datastore), "server" + i));
 		}

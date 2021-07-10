@@ -67,14 +67,29 @@ public class Server extends AbstractActor {
 		public HashMap<Integer, Integer> getPreviousWriteOperationsByTxn() {
 			return (previousWriteOperations);
 		}
-		public DataItem getDataItemByCopies(Integer dataId, List<DataOperation> copies) {
-			for (DataOperation dataOperation: copies) {
-				if (dataOperation.getKey() == dataId)
-					return (dataOperation.getDataItem());
+		public DataItem getLastDataItemByCopies(Integer dataId, List<DataOperation> copies) {
+			List<DataItem> itemsWithSameId = new ArrayList<DataItem>();
+			for (DataOperation dataoperation: copies) {
+				if (dataoperation.getKey() == dataId)
+					itemsWithSameId.add(dataoperation.getDataItem());
+					
 			}
+			if (itemsWithSameId.isEmpty())
 			return null;
-		
-		}
+			else if (itemsWithSameId.size()==1){
+				return itemsWithSameId.get(0);
+		}else{
+				Integer version = 0;
+				DataItem lastDataItem = null;
+			for (DataItem dataItem: itemsWithSameId) {
+				if (dataItem.getVersion() >= version)
+				version = dataItem.getVersion();
+				lastDataItem = dataItem;
+				}
+			return lastDataItem;
+			}
+		}	
+			
 		@Override
 		public int hashCode() {
 			final int prime = 31;
@@ -110,6 +125,7 @@ public class Server extends AbstractActor {
 		}
 		return null;
 	}
+
 
 	/*-- Message classes ------------------------------------------------------ */
 
@@ -162,7 +178,7 @@ public class Server extends AbstractActor {
 		}else{
 		//Otherwise in the PW
 
-			dataoperation.setDataItem(pw.getDataItemByCopies(dataId, pw.writeCopies));
+			dataoperation.setDataItem(pw.getLastDataItemByCopies(dataId, pw.writeCopies));
 		}
 		//DataItem dataItemCopy = dataoperation.getDataItem();
 		log.debug("server" + serverId + "<--[READ(" + dataoperation.getKey() + ")]--coordinator"
@@ -203,7 +219,7 @@ public class Server extends AbstractActor {
 		dataItemOverwriten = datastore.get(msg.dataoperation.getKey());
 		//Otherwise retrieve from the private workspace
 		}else {
-		dataItemOverwriten = pw.getDataItemByCopies(dataId, pw.writeCopies);
+		dataItemOverwriten = pw.getLastDataItemByCopies(dataId, pw.writeCopies);
 		}
 		// Increase the data version
 		
@@ -252,8 +268,12 @@ public class Server extends AbstractActor {
 						datastore.get(dataId).setLock(txn.hashCode());
 					}
 					dataoperation.setType(DataOperation.Type.WRITE);
-					if (!((pw.writeCopies.contains(dataoperation) && pw.writeCopies != null) || datastore.containsValue(dataItemReadCheck))) {
-						vote = false;
+					if (datastore.get(dataId) != dataItemReadCheck) {
+						if (pw.writeCopies !=null) {
+							if (! pw.writeCopies.contains(dataoperation)) {
+								vote = false;
+							}
+						}
 					}
 					
 				}
