@@ -77,8 +77,7 @@ public class ConsistencyTester extends AbstractActor{
 		if(server_replies == servers.size()) {
 			log.debug("Total values : "+ counter_values + "; server_replies = " + server_replies );
 			
-			// TODO if we have all the data stores, then check the consistency
-		}
+
 	}
 
 	@Override
