@@ -63,19 +63,17 @@ public class ConsistencyTester extends AbstractActor{
 	}
 	
 	private void OnGoodbyeMsg(Server.GoodbyeMsg msg) {
-		log.debug("OnGoodbyeMsg from Server "+msg.serverId);
+	log.debug("OnGoodbyeMsg from Server "+msg.serverId);
 		server_replies++;
-		Integer serverId = msg.serverId;
 		// TODO get the data store of the server
 		Map<Integer, DataItem> datastore = msg.datastore;
-		log.debug("serverId : " + serverId +" displays his datastore");
 		for (Integer dataId: datastore.keySet()) {
 			counter_values += datastore.get(dataId).getValue();
-			log.debug("dataId : " + dataId + "value : " + datastore.get(dataId).getValue() + "version : " + datastore.get(dataId).getVersion());
 		}
-		
 		if(server_replies == servers.size()) {
-			log.debug("Total values : "+ counter_values + "; server_replies = " + server_replies );		
+			log.debug("Total values : "+ counter_values + "; server_replies = " + server_replies );
+			// TODO if we have all the data stores, then check the consistency
+		}	
 	}
 
 	@Override
