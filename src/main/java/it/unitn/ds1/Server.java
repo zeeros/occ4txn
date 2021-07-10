@@ -138,6 +138,7 @@ public class Server extends AbstractActor {
 		// within
 
 		PrivateWorkspace pw = getPrivateWorkspaceByTxn(txn);
+
 		// Retrieve the current version by first checking if previous writes have been done
 		if (pw == null) {
 			pw = new PrivateWorkspace(txn, serverId);
@@ -157,6 +158,7 @@ public class Server extends AbstractActor {
 		
 		// copy of the dataitem that will be temporary stored in the private workspace
 		pw.readCopies.put(dataoperation.getKey(), dataItemCopy);
+
 		// Respond to the coordinator with the serverId, TXN, its data operation and the
 		// value in the datastore
 		getSender().tell(new Coordinator.ReadResultMsg(serverId, txn, dataoperation), getSelf());
@@ -235,8 +237,10 @@ public class Server extends AbstractActor {
 						//Set the lock for the current item
 						datastore.get(dataId).setLock(txn.hashCode());
 					}
+
 					
 					if (dataItemReadCheck.getVersion() != datastore.get(dataId).getVersion() + previousWriteOperations.get(dataId)) {
+
 						vote = false;
 					}
 				}
