@@ -238,7 +238,8 @@ public class Coordinator extends AbstractActor {
 							+ serverId);
 				}
 				// Inform the client
-				getSender().tell(new TxnResultMsg(true), getSelf());
+				Integer clientId = txn.getClientId();
+				clients.get(clientId).tell(new TxnResultMsg(true), getSelf());
 			}
 		} else {
 			// ABORT vote, send ABORT result to all
@@ -260,7 +261,8 @@ public class Coordinator extends AbstractActor {
 				log.debug("Server :" + serverId + "will receive the final vote result : " + true);
 			}
 			// Inform the client
-			getSender().tell(new TxnResultMsg(false), getSelf());
+			Integer clientId = txn.getClientId();
+			clients.get(clientId).tell(new TxnResultMsg(true), getSelf());
 		}
 	}
 
