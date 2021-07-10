@@ -279,6 +279,7 @@ public class TxnClient extends AbstractActor {
 			log.info("client" + clientId + "<--[COMMIT FAIL (" + (numAttemptedTxn - numCommittedTxn) + "/"
 					+ numAttemptedTxn + ")]");
 		}
+
 //only one txn test (temporary)		
 		beginTxn();
 	}

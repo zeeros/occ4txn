@@ -15,8 +15,8 @@ import java.util.Map;
 public class CtrlSystem {
 	final static int N_CLIENTS = 4;
 	final static int N_COORDINATORS = 10;
-	final static int N_SERVERS = 10;
-	final static int N_KEY_SERVER = 10;
+	final static int N_SERVERS = 5;
+	final static int N_KEY_SERVER = 5;
 	final static int MAX_KEY = N_KEY_SERVER * N_SERVERS - 1;
 	final static int INIT_ITEM_VALUE = 100;
 
@@ -81,10 +81,10 @@ public class CtrlSystem {
 			for (Map.Entry<Integer, ActorRef> entry : clients.entrySet()) {
 				entry.getValue().tell(new TxnClient.StopMsg(), null);
 			}
-			Thread.sleep(1000);
+			Thread.sleep(3000);
 			consistencyTester.tell(new ConsistencyTester.GoodbyeMsg(), null);
 			// Wait for the consistency tester to check the data stores
-			Thread.sleep(1000);
+			Thread.sleep(3000);
 			system.terminate();
 		}
 		

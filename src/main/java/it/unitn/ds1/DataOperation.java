@@ -38,7 +38,8 @@ public class DataOperation {
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + dataItem.hashCode() + key + type.hashCode();
+//		result = prime * result + dataItem.hashCode() + key + type.hashCode();
+		result = prime * result + dataItem.hashCode() + 10000000 * key;
 		return result;
 	}
 
@@ -55,8 +56,8 @@ public class DataOperation {
 			return false;
 		if (key != other.key)
 			return false;
-		if (type != other.type)
-			return false;
+//		if (type != other.type)
+//			return false;
 		return true;
 	}
 
