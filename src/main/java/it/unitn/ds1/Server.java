@@ -352,6 +352,21 @@ public class Server extends AbstractActor {
 				entry.getValue().setLock(null);
 			}
 		}
+		
+		int datastoresum = checkDatastoreSum();
+		if(datastoresum != 1000) {
+			System.out.println("ERROR: total sum = "+datastoresum);
+			System.exit(0);
+		};
+	}
+	
+	private int checkDatastoreSum() {
+		int counter_values = 0;
+		for (Integer dataId: datastore.keySet()) {
+			counter_values += datastore.get(dataId).getValue();
+			log.debug(dataId + ": " + datastore.get(dataId).getValue() + " (v: " + datastore.get(dataId).getVersion()+")");
+		}
+		return counter_values;
 	}
 	
 	
