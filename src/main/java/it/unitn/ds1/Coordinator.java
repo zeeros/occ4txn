@@ -173,7 +173,8 @@ public class Coordinator extends AbstractActor {
 		log.debug("coordinator" + coordinatorId + "<--[READ(" + key + ")]--client" + clientId);
 
 		// Set the transaction
-		Txn txn = new Txn(coordinatorId, clientId);
+		//Txn txn = new Txn(coordinatorId, clientId);
+		Txn txn = getTxnByClientId(clientId);
 		// Set the operation to be add to the transaction
 		DataOperation dataOperation = new DataOperation(DataOperation.Type.READ, key, null);
 		// Retrieve the transaction for clientId and add append to it the READ operation
@@ -203,7 +204,8 @@ public class Coordinator extends AbstractActor {
 		log.debug("coordinator" + coordinatorId + "<--[WRITE(" + key + ")=" + value + "]--client" + clientId);
 
 		// Set the transaction
-		Txn txn = new Txn(coordinatorId, clientId);
+		//Txn txn = new Txn(coordinatorId, clientId);
+		Txn txn = getTxnByClientId(clientId);
 		// Retrieve the transaction for clientId
 		List<DataOperation> dataoperations = transactions.get(txn);
 		// Set the operation to be add to the transaction
