@@ -234,8 +234,6 @@ public class Coordinator extends AbstractActor {
 				}
 				for (Integer serverId : serverIds) {
 					servers.get(serverId).tell(new Coordinator.TxnVoteResultMsg(txn, true), getSelf());
-					log.debug("Server : " + serverId + "will receive the final vote result : " + true + "from Server : "
-							+ serverId);
 				}
 				// Inform the client
 				Integer clientId = txn.getClientId();
@@ -258,7 +256,6 @@ public class Coordinator extends AbstractActor {
 			serverIds.remove(msg.serverId);
 			for (Integer serverId : serverIds) {
 				servers.get(serverId).tell(new Coordinator.TxnVoteResultMsg(txn, false), getSelf());
-				log.debug("Server :" + serverId + "will receive the final vote result : " + true);
 			}
 			// Inform the client
 			Integer clientId = txn.getClientId();

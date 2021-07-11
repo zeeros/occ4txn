@@ -315,6 +315,9 @@ public class Server extends AbstractActor {
 		Txn txn = msg.txn;
 		boolean commit = msg.commit;
 		PrivateWorkspace pw = getPrivateWorkspaceByTxn(txn);
+		
+
+		log.debug("Server " + serverId + " gets the final vote result: " + commit);
 
 		// if the message is commit, we replace the dataItem from the private workspace
 		// to the datastore

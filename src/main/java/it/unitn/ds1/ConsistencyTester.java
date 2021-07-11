@@ -71,7 +71,7 @@ public class ConsistencyTester extends AbstractActor{
 		log.debug("serverId : " + serverId +" displays his datastore");
 		for (Integer dataId: datastore.keySet()) {
 			counter_values += datastore.get(dataId).getValue();
-			log.debug("dataId : " + dataId + "value : " + datastore.get(dataId).getValue() + "version : " + datastore.get(dataId).getVersion());
+			log.debug(dataId + ": " + datastore.get(dataId).getValue() + " (v: " + datastore.get(dataId).getVersion()+")");
 		}
 		
 		if(server_replies == servers.size()) {
