@@ -170,7 +170,7 @@ public class Coordinator extends AbstractActor {
 			getSender().tell(new TxnAcceptMsg(), getSelf());
 		}else {
 			// The client has an ongoing transaction, don't respond
-			log.debug("coordinator" + coordinatorId + ": client" + clientId + "has an ongoing transaction, ignore");
+			log.debug("coordinator" + coordinatorId + ": client" + clientId + " has an ongoing transaction, ignore");
 		}
 	}
 
