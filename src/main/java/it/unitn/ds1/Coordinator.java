@@ -227,60 +227,58 @@ public class Coordinator extends AbstractActor {
 	private void OnTxnVoteMsg(Server.TxnVoteMsg msg) throws InterruptedException  {
 		Txn txn = msg.txn;
 		Boolean vote = msg.vote;
+		Integer clientId = txn.getClientId();
+		// Retrieve the keys for the data items involved in the transaction
+		Set<Integer> keys = new HashSet<Integer>();
+		List<DataOperation> dataoperations = transactions.get(txn);
+		Set<Integer> serverIds = new HashSet<Integer>();
+		// From the keys, retrieve the ids of the servers involved in the transaction
+		if (dataoperations != null) {
+			for (DataOperation dataOperation : dataoperations) {
+				keys.add(dataOperation.getKey());
+			}
+
+			for (Integer key : keys) {
+				serverIds.add(getServerIdByKey(key));
+			}
+		}
+		
 		if (vote) {
 			txn.setVotes(txn.getVotes() + 1);
-			if (txn.getVotes() == servers.size()) {
+			if (txn.getVotes() == serverIds.size()) {
 				// All vote COMMIT, send the vote result to all servers
-				List<DataOperation> dataoperations = transactions.get(txn);
-				// Retrieve the keys for the data items involved in the transaction
-				Set<Integer> keys = new HashSet<Integer>();
-				for (DataOperation dataOperation : dataoperations) {
-					keys.add(dataOperation.getKey());
-				}
-				// From the keys, retrieve the ids of the servers involved in the transaction
-				Set<Integer> serverIds = new HashSet<Integer>();
-				for (Integer key : keys) {
-					serverIds.add(getServerIdByKey(key));
-				}
+
+
 				for (Integer serverId : serverIds) {
 					servers.get(serverId).tell(new Coordinator.TxnVoteResultMsg(txn, true), getSelf());
 				}
+				
+				// Inform the client
+				clients.get(clientId).tell(new TxnResultMsg(true), getSelf());
 				// Remove the transaction
 				
 				transactions.remove(txn);
-				// Inform the client
-				Integer clientId = txn.getClientId();
-				clients.get(clientId).tell(new TxnResultMsg(true), getSelf());
 			}
-		} else {
-			
-			// ABORT vote, send ABORT result to all
-			List<DataOperation> dataoperations = transactions.get(txn);
-			// Check if there are pending operations
-			if (dataoperations != null) {
-				// Retrieve the keys for the data items involved in the transaction
-				Set<Integer> keys = new HashSet<Integer>();
-				for (DataOperation dataOperation : dataoperations) {
-					keys.add(dataOperation.getKey());
-				}
-				// From the keys, retrieve the ids of the servers involved in the transaction
-				Set<Integer> serverIds = new HashSet<Integer>();
-				for (Integer key : keys) {
-					serverIds.add(getServerIdByKey(key));
-				}
-				// Exclude the current sender (that aborts autonomously)
-				serverIds.remove(msg.serverId);
-				for (Integer serverId : serverIds) {
-					servers.get(serverId).tell(new Coordinator.TxnVoteResultMsg(txn, false), getSelf());
-				}
-			}
-			// Remove the transaction
-			
-			transactions.remove(txn);
-			// Inform the client
-			Integer clientId = txn.getClientId();
-			clients.get(clientId).tell(new TxnResultMsg(false), getSelf());
 		}
+		else {
+			// ABORT vote, send ABORT result to all
+			// Check if there are pending operations
+			// Exclude the current sender (that aborts autonomously)
+			serverIds.remove(msg.serverId);
+			for (Integer serverId : serverIds) {
+				servers.get(serverId).tell(new Coordinator.TxnVoteResultMsg(txn, false), getSelf());
+			}
+			//send the result to the client
+			if (txn.getVotesCollected() == serverIds.size()) {
+			clients.get(clientId).tell(new TxnResultMsg(false), getSelf());
+			}
+		}
+			//Remove the Txn when all votes collected (true or false)
+			
+			if (txn.getVotesCollected() == serverIds.size()) {
+			clients.get(clientId).tell(new TxnResultMsg(false), getSelf());
+			transactions.remove(txn);
+			}
 	}
 
 	private void OnTxnEndMsg(TxnEndMsg msg) throws InterruptedException {
