@@ -377,6 +377,11 @@ public class Server extends AbstractActor {
 			}
 		}
 		
+		
+		/*
+		 * Specific test
+		 * 
+		 */
 		int datastoresum = checkDatastoreSum();
 		if(datastoresum != 1000) {
 			System.out.println("ERROR: total sum = "+datastoresum);

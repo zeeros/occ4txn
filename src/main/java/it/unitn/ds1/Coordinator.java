@@ -27,6 +27,7 @@ public class Coordinator extends AbstractActor {
 
 	public Coordinator(int coordinatorId) {
 		this.coordinatorId = coordinatorId;
+		this.transactions = new HashMap<Txn, List<DataOperation>>();
 	}
 
 	static public Props props(int coordinatorId) {
@@ -156,15 +157,21 @@ public class Coordinator extends AbstractActor {
 		this.clients = msg.clients;
 		this.servers = msg.servers;
 		this.N_KEY_SERVER = msg.N_KEY_SERVER;
-		this.transactions = new HashMap<Txn, List<DataOperation>>();
 	}
 
 	private void OnTxnBeginMsg(TxnBeginMsg msg) {
 		Integer clientId = msg.clientId;
 		log.debug("coordinator" + coordinatorId + "<--[TXN_BEGIN]--client" + clientId);
-
-		transactions.put(new Txn(coordinatorId, clientId), new ArrayList<DataOperation>());
-		getSender().tell(new TxnAcceptMsg(), getSelf());
+		
+		List<DataOperation> dataOperations = transactions.get(new Txn(coordinatorId, clientId));
+		if(dataOperations == null) {
+			// The client has no ongoing transaction
+			transactions.put(new Txn(coordinatorId, clientId), new ArrayList<DataOperation>());
+			getSender().tell(new TxnAcceptMsg(), getSelf());
+		}else {
+			// The client has an ongoing transaction, don't respond
+			log.debug("coordinator" + coordinatorId + ": client" + clientId + "has an ongoing transaction, ignore");
+		}
 	}
 
 	private void OnReadMsg(TxnClient.ReadMsg msg) {
@@ -237,6 +244,8 @@ public class Coordinator extends AbstractActor {
 				for (Integer serverId : serverIds) {
 					servers.get(serverId).tell(new Coordinator.TxnVoteResultMsg(txn, true), getSelf());
 				}
+				// Remove the transaction
+				transactions.remove(txn);
 				// Inform the client
 				Integer clientId = txn.getClientId();
 				clients.get(clientId).tell(new TxnResultMsg(true), getSelf());
@@ -259,6 +268,8 @@ public class Coordinator extends AbstractActor {
 			for (Integer serverId : serverIds) {
 				servers.get(serverId).tell(new Coordinator.TxnVoteResultMsg(txn, false), getSelf());
 			}
+			// Remove the transaction
+			transactions.remove(txn);
 			// Inform the client
 			Integer clientId = txn.getClientId();
 			clients.get(clientId).tell(new TxnResultMsg(true), getSelf());
