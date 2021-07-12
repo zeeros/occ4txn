@@ -161,16 +161,17 @@ public class Coordinator extends AbstractActor {
 
 	private void OnTxnBeginMsg(TxnBeginMsg msg) {
 		Integer clientId = msg.clientId;
+		Txn txn = new Txn(coordinatorId, clientId);
 		log.debug("coordinator" + coordinatorId + "<--[TXN_BEGIN]--client" + clientId);
-		
+
 		List<DataOperation> dataOperations = transactions.get(new Txn(coordinatorId, clientId));
-		if(dataOperations == null) {
+		if (dataOperations == null) {
 			// The client has no ongoing transaction
-			transactions.put(new Txn(coordinatorId, clientId), new ArrayList<DataOperation>());
+			transactions.put(txn, new ArrayList<DataOperation>());
 			getSender().tell(new TxnAcceptMsg(), getSelf());
-		}else {
+		} else {
 			// The client has an ongoing transaction, don't respond
-			log.debug("coordinator" + coordinatorId + ": client" + clientId + " has an ongoing transaction, ignore");
+			log.debug("coordinator" + coordinatorId + ": client" + clientId + " has an ongoing transaction, ignore");// Remove the transaction
 		}
 	}
 
@@ -180,7 +181,7 @@ public class Coordinator extends AbstractActor {
 		log.debug("coordinator" + coordinatorId + "<--[READ(" + key + ")]--client" + clientId);
 
 		// Set the transaction
-		//Txn txn = new Txn(coordinatorId, clientId);
+		// Txn txn = new Txn(coordinatorId, clientId);
 		Txn txn = getTxnByClientId(clientId);
 		// Set the operation to be add to the transaction
 		DataOperation dataOperation = new DataOperation(DataOperation.Type.READ, key, null);
@@ -211,7 +212,7 @@ public class Coordinator extends AbstractActor {
 		log.debug("coordinator" + coordinatorId + "<--[WRITE(" + key + ")=" + value + "]--client" + clientId);
 
 		// Set the transaction
-		//Txn txn = new Txn(coordinatorId, clientId);
+		// Txn txn = new Txn(coordinatorId, clientId);
 		Txn txn = getTxnByClientId(clientId);
 		// Retrieve the transaction for clientId
 		List<DataOperation> dataoperations = transactions.get(txn);
@@ -253,26 +254,29 @@ public class Coordinator extends AbstractActor {
 		} else {
 			// ABORT vote, send ABORT result to all
 			List<DataOperation> dataoperations = transactions.get(txn);
-			// Retrieve the keys for the data items involved in the transaction
-			Set<Integer> keys = new HashSet<Integer>();
-			for (DataOperation dataOperation : dataoperations) {
-				keys.add(dataOperation.getKey());
-			}
-			// From the keys, retrieve the ids of the servers involved in the transaction
-			Set<Integer> serverIds = new HashSet<Integer>();
-			for (Integer key : keys) {
-				serverIds.add(getServerIdByKey(key));
-			}
-			// Exclude the current sender (that aborts autonomously)
-			serverIds.remove(msg.serverId);
-			for (Integer serverId : serverIds) {
-				servers.get(serverId).tell(new Coordinator.TxnVoteResultMsg(txn, false), getSelf());
+			// Check if there are pending operations
+			if (dataoperations != null) {
+				// Retrieve the keys for the data items involved in the transaction
+				Set<Integer> keys = new HashSet<Integer>();
+				for (DataOperation dataOperation : dataoperations) {
+					keys.add(dataOperation.getKey());
+				}
+				// From the keys, retrieve the ids of the servers involved in the transaction
+				Set<Integer> serverIds = new HashSet<Integer>();
+				for (Integer key : keys) {
+					serverIds.add(getServerIdByKey(key));
+				}
+				// Exclude the current sender (that aborts autonomously)
+				serverIds.remove(msg.serverId);
+				for (Integer serverId : serverIds) {
+					servers.get(serverId).tell(new Coordinator.TxnVoteResultMsg(txn, false), getSelf());
+				}
 			}
 			// Remove the transaction
 			transactions.remove(txn);
 			// Inform the client
 			Integer clientId = txn.getClientId();
-			clients.get(clientId).tell(new TxnResultMsg(true), getSelf());
+			clients.get(clientId).tell(new TxnResultMsg(false), getSelf());
 		}
 	}
 
@@ -299,7 +303,6 @@ public class Coordinator extends AbstractActor {
 			// Client wants to commit
 			// Ask a vote to each server
 			for (Integer serverId : serverIds) {
-
 				servers.get(serverId).tell(new Coordinator.TxnAskVoteMsg(txn), getSelf());
 			}
 		} else {
@@ -308,7 +311,9 @@ public class Coordinator extends AbstractActor {
 			for (Integer serverId : serverIds) {
 				servers.get(serverId).tell(new Coordinator.TxnVoteResultMsg(txn, false), getSelf());
 			}
-		}
+			// And remove the transaction
+			transactions.remove(txn);
+		}		
 
 		getSender().tell(new TxnResultMsg(commit), getSelf());
 	}

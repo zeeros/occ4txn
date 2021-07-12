@@ -40,7 +40,8 @@ public class Server extends AbstractActor {
 		private List<DataOperation> writeCopies;
 		private List<DataOperation> readCopies;
 		private final Integer serverId;
-		//Map a dataId with the number of previous write data operations done by the Txn
+		// Map a dataId with the number of previous write data operations done by the
+		// Txn
 		private HashMap<Integer, Integer> previousWriteOperations;
 
 		public PrivateWorkspace(Txn txn, Integer serverId) {
@@ -49,12 +50,11 @@ public class Server extends AbstractActor {
 			this.readCopies = new ArrayList<DataOperation>();
 			this.serverId = serverId;
 			this.previousWriteOperations = new HashMap<Integer, Integer>();
-			//set all the values to 0
-			for (Integer dataId: datastore.keySet())
+			// set all the values to 0
+			for (Integer dataId : datastore.keySet())
 				previousWriteOperations.put(dataId, 0);
-			
+
 		}
-		
 
 		public Integer getServerId() {
 			return serverId;
@@ -63,37 +63,35 @@ public class Server extends AbstractActor {
 		public Txn getTxn() {
 			return txn;
 		}
-		
-
 
 		public DataItem getLastDataItemByCopies(Integer dataId, List<DataOperation> copies) {
 			List<DataItem> itemsWithSameId = new ArrayList<DataItem>();
-			for (DataOperation dataoperation: copies) {
+			for (DataOperation dataoperation : copies) {
 				if (dataoperation.getKey() == dataId)
 					itemsWithSameId.add(dataoperation.getDataItem());
-					
+
 			}
 			if (itemsWithSameId.isEmpty())
-			return null;
-			else if (itemsWithSameId.size()==1){
+				return null;
+			else if (itemsWithSameId.size() == 1) {
 				return itemsWithSameId.get(0);
-		}else{
+			} else {
 				Integer version = 0;
 				DataItem lastDataItem = null;
-			for (DataItem dataItem: itemsWithSameId) {
-				if (dataItem.getVersion() >= version)
-				version = dataItem.getVersion();
-				lastDataItem = dataItem;
+				for (DataItem dataItem : itemsWithSameId) {
+					if (dataItem.getVersion() >= version)
+						version = dataItem.getVersion();
+					lastDataItem = dataItem;
 				}
-			return lastDataItem;
+				return lastDataItem;
 			}
-		}	
-			
+		}
+
 		@Override
 		public int hashCode() {
 			final int prime = 31;
 			int result = 1;
-			result = prime * result + txn.hashCode() + 1000*serverId;
+			result = prime * result + txn.hashCode() + 1000 * serverId;
 			return result;
 		}
 
@@ -125,11 +123,8 @@ public class Server extends AbstractActor {
 		return null;
 	}
 
-
 	/*-- Message classes ------------------------------------------------------ */
 
-
-	
 	public static class WriteMsg implements Serializable {
 	}
 
@@ -144,7 +139,7 @@ public class Server extends AbstractActor {
 			this.serverId = serverId;
 		}
 	}
-	
+
 	public static class GoodbyeMsg implements Serializable {
 		public int serverId;
 		public Map<Integer, DataItem> datastore;
@@ -165,27 +160,29 @@ public class Server extends AbstractActor {
 		// within
 
 		PrivateWorkspace pw = getPrivateWorkspaceByTxn(txn);
-		// Retrieve the current version by first checking if previous writes have been done
+		// Retrieve the current version by first checking if previous writes have been
+		// done
 		if (pw == null) {
 			pw = new PrivateWorkspace(txn, serverId);
 			privateWorkspaces.put(txn, pw);
-			}
-		HashMap<Integer,Integer> previousWriteOperations = pw.previousWriteOperations;
-		//If no write operations before : retrieve the dataItem in the data store
+		}
+		HashMap<Integer, Integer> previousWriteOperations = pw.previousWriteOperations;
+		// If no write operations before : retrieve the dataItem in the data store
 		if (previousWriteOperations.get(dataId) == 0) {
 			dataoperation.setDataItem(datastore.get(dataId));
-		}else{
-		//Otherwise in the PW
+		} else {
+			// Otherwise in the PW
 
 			dataoperation.setDataItem(pw.getLastDataItemByCopies(dataId, pw.writeCopies));
 		}
-		//DataItem dataItemCopy = dataoperation.getDataItem();
+		// DataItem dataItemCopy = dataoperation.getDataItem();
 		log.debug("server" + serverId + "<--[READ(" + dataoperation.getKey() + ")]--coordinator"
 				+ txn.getCoordinatorId());
-		
+
 		// copy of the dataitem that will be temporary stored in the private workspace
-		DataItem dataItemCopy = new DataItem(dataoperation.getDataItem().getVersion(),dataoperation.getDataItem().getValue());
-		pw.readCopies.add(new DataOperation(Type.READ,dataId, dataoperation.getDataItem()));
+		DataItem dataItemCopy = new DataItem(dataoperation.getDataItem().getVersion(),
+				dataoperation.getDataItem().getValue());
+		pw.readCopies.add(new DataOperation(Type.READ, dataId, dataoperation.getDataItem()));
 		// Respond to the coordinator with the serverId, TXN, its data operation and the
 		// value in the datastore
 		getSender().tell(new Coordinator.ReadResultMsg(serverId, txn, dataoperation), getSelf());
@@ -203,40 +200,39 @@ public class Server extends AbstractActor {
 			pw = new PrivateWorkspace(txn, serverId);
 			privateWorkspaces.put(txn, pw);
 		}
-		
+
 		// Retrieve the current version
 		Integer dataId = dataoperation.getKey();
-		DataItem newDataItem = new DataItem (dataoperation.getDataItem().getVersion(),dataoperation.getDataItem().getValue());
-		
+		DataItem newDataItem = new DataItem(dataoperation.getDataItem().getVersion(),
+				dataoperation.getDataItem().getValue());
 
 		// we need to retrieve the version of the data item that is wanted to be
 		// overwriten on in the private workspace or in the datastore
-		
-		HashMap<Integer,Integer> previousWriteOperations = pw.previousWriteOperations;
-		DataItem dataItemOverwriten ;
-		//If no previous write operations before : retrieve the  original dataItem from the data store
+
+		HashMap<Integer, Integer> previousWriteOperations = pw.previousWriteOperations;
+		DataItem dataItemOverwriten;
+		// If no previous write operations before : retrieve the original dataItem from
+		// the data store
 		if (previousWriteOperations.get(dataId) == 0) {
-		dataItemOverwriten = datastore.get(msg.dataoperation.getKey());
-		//Otherwise retrieve from the private workspace
-		}else {
-		dataItemOverwriten = pw.getLastDataItemByCopies(dataId, pw.writeCopies);
+			dataItemOverwriten = datastore.get(msg.dataoperation.getKey());
+			// Otherwise retrieve from the private workspace
+		} else {
+			dataItemOverwriten = pw.getLastDataItemByCopies(dataId, pw.writeCopies);
 		}
 		// Increase the data version
-		
+
 		Integer version = dataItemOverwriten.getVersion();
 		newDataItem.setVersion(version + 1);
-		
-		//Increase the number of previous write operation for the Txn
-		Integer newDataOperationCounter = previousWriteOperations.get(dataId) +1;
+
+		// Increase the number of previous write operation for the Txn
+		Integer newDataOperationCounter = previousWriteOperations.get(dataId) + 1;
 		previousWriteOperations.replace(dataId, newDataOperationCounter);
-		log.debug("server" + serverId + "<--[WRITE(" + dataoperation.getKey() + ")=" + newDataItem.getValue() + ", previousversion=" + version
-				+ "]--coordinator" + txn.getCoordinatorId());
-		
+		log.debug("server" + serverId + "<--[WRITE(" + dataoperation.getKey() + ")=" + newDataItem.getValue()
+				+ ", previousversion=" + version + "]--coordinator" + txn.getCoordinatorId());
 
 		// copy of the dataitem that will be temporary stored in the private workspace
 		pw.writeCopies.add(new DataOperation(DataOperation.Type.WRITE, dataId, newDataItem));
-		
-		
+
 	}
 
 	private void OnTxnAskVoteMsg(Coordinator.TxnAskVoteMsg msg) {
@@ -244,81 +240,75 @@ public class Server extends AbstractActor {
 		Boolean vote = true;
 		// Local validation: in the private workspace
 		PrivateWorkspace pw = getPrivateWorkspaceByTxn(txn);
-		
 
-		
-			
-			DataItem dataItemReadCheck, dataItemWriteCheck;
-			HashMap<Integer,Integer> previousWriteOperations = pw.previousWriteOperations;
-			// We check if the version of the data read is the same as the one in the
-			// datastore or the last in the private workspace and set lock if the data Items
-			//are not already locked by another TXN
-			
-			for (DataOperation dataoperation : pw.readCopies) {
-				Integer dataId = dataoperation.getKey();
-				dataItemReadCheck = dataoperation.getDataItem();
-				if (dataItemReadCheck != null) {
-					// Get the lock for the current data item
-					Integer lock = datastore.get(dataId).getLock();
-					// Check if item is locked by another transaction
-					// if so, cast an ABORT vote
-					if(lock != null && lock != txn.hashCode()) {
-						vote = false;
-					} else {
-						//Set the lock for the current item
-						datastore.get(dataId).setLock(txn.hashCode());
-					}
-				}
-			}
-			for (DataOperation dataoperation : pw.readCopies) {
-				Integer dataId = dataoperation.getKey();
-				dataItemReadCheck = dataoperation.getDataItem();
-				dataoperation.setType(DataOperation.Type.WRITE);
-				if (datastore.get(dataId) != dataItemReadCheck) {
-					if (pw.writeCopies !=null) {
-						if (! pw.writeCopies.contains(dataoperation)) {
-							vote = false;
-						}
-					}
-				}
-					
-			}
-			
-			
+		DataItem dataItemReadCheck, dataItemWriteCheck;
+		HashMap<Integer, Integer> previousWriteOperations = pw.previousWriteOperations;
+		// We check if the version of the data read is the same as the one in the
+		// datastore or the last in the private workspace and set lock if the data Items
+		// are not already locked by another TXN
 
-			// We check if the version of the data writen is the same as the one in the
-			// datastore or the last in the private workspace and set lock if the data Items
-			//are not already locked by another TXN
-			
-			for (DataOperation dataoperation : pw.writeCopies) {
-				Integer dataId = dataoperation.getKey();
-				dataItemWriteCheck = dataoperation.getDataItem();
-				if (dataItemWriteCheck != null) {
-					// Check if item is locked by another transaction
-					// if so, cast an ABORT vote
-					DataItem dataItemOriginal = datastore.get(dataId);
-					Integer lock = dataItemOriginal.getLock();
-					if(lock != null && lock != txn.hashCode()) {
-						log.debug("hello version dataoperation : "+dataoperation.getDataItem().getVersion()+"version Origanal : "+dataItemOriginal.getVersion() + "lock : " + lock +"txnhashcode : " + txn.hashCode());
+		for (DataOperation dataoperation : pw.readCopies) {
+			Integer dataId = dataoperation.getKey();
+			dataItemReadCheck = dataoperation.getDataItem();
+			if (dataItemReadCheck != null) {
+				// Get the lock for the current data item
+				Integer lock = datastore.get(dataId).getLock();
+				// Check if item is locked by another transaction
+				// if so, cast an ABORT vote
+				if (lock != null && lock != txn.hashCode()) {
+					vote = false;
+				} else {
+					// Set the lock for the current item
+					datastore.get(dataId).setLock(txn.hashCode());
+				}
+			}
+		}
+		for (DataOperation dataoperation : pw.readCopies) {
+			Integer dataId = dataoperation.getKey();
+			dataItemReadCheck = dataoperation.getDataItem();
+			dataoperation.setType(DataOperation.Type.WRITE);
+			if (datastore.get(dataId) != dataItemReadCheck) {
+				if (pw.writeCopies != null) {
+					if (!pw.writeCopies.contains(dataoperation)) {
 						vote = false;
-					} else{
-						//Set the lock for the current item
-						dataItemOriginal.setLock(txn.hashCode());
 					}
 				}
 			}
-			for (DataOperation dataoperation : pw.writeCopies) {
-				Integer dataId = dataoperation.getKey();
+
+		}
+
+		// We check if the version of the data writen is the same as the one in the
+		// datastore or the last in the private workspace and set lock if the data Items
+		// are not already locked by another TXN
+
+		for (DataOperation dataoperation : pw.writeCopies) {
+			Integer dataId = dataoperation.getKey();
+			dataItemWriteCheck = dataoperation.getDataItem();
+			if (dataItemWriteCheck != null) {
+				// Check if item is locked by another transaction
+				// if so, cast an ABORT vote
+				DataItem dataItemOriginal = datastore.get(dataId);
+				Integer lock = dataItemOriginal.getLock();
+				if (lock != null && lock != txn.hashCode()) {
+					log.debug("hello version dataoperation : " + dataoperation.getDataItem().getVersion()
+							+ "version Origanal : " + dataItemOriginal.getVersion() + "lock : " + lock
+							+ "txnhashcode : " + txn.hashCode());
+					vote = false;
+				} else {
+					// Set the lock for the current item
+					dataItemOriginal.setLock(txn.hashCode());
+				}
+			}
+		}
+		for (DataOperation dataoperation : pw.writeCopies) {
+			Integer dataId = dataoperation.getKey();
 			dataItemWriteCheck = dataoperation.getDataItem();
 			DataItem dataItemOriginal = datastore.get(dataId);
-					if ((dataoperation.getDataItem().getVersion() - dataItemOriginal.getVersion())<=0) {
-						vote = false;
-					}
-				}
-			
-		
-		
-		
+			if ((dataoperation.getDataItem().getVersion() - dataItemOriginal.getVersion()) <= 0) {
+				vote = false;
+			}
+		}
+
 		getSender().tell(new TxnVoteMsg(txn, vote, serverId), getSelf());
 		log.info("ServerId : " + serverId + " -> coordinator : " + getSender() + "(local vote result = " + vote);
 	}
@@ -327,7 +317,6 @@ public class Server extends AbstractActor {
 		Txn txn = msg.txn;
 		boolean commit = msg.commit;
 		PrivateWorkspace pw = getPrivateWorkspaceByTxn(txn);
-		
 
 		log.debug("Server " + serverId + " gets the final vote result: " + commit);
 
@@ -337,48 +326,47 @@ public class Server extends AbstractActor {
 		// private workspace
 		if (!(pw == null)) {
 			if (commit) {
-				
+
 				for (DataOperation dataoperation : pw.writeCopies) {
 					Integer dataId = dataoperation.getKey();
-					
-					//We only write the final version of the dataItem. With locks we are guaranteed to see the original version
+
+					// We only write the final version of the dataItem. With locks we are guaranteed
+					// to see the original version
 					Integer originalVersion = datastore.get(dataId).getVersion();
 					Integer version = dataoperation.getDataItem().getVersion();
-					//if (version == originalVersion + pw.previousWriteOperations.get(dataId)) {
+					// if (version == originalVersion + pw.previousWriteOperations.get(dataId)) {
 					log.info("DataItem(" + dataId + ") =  (value = " + dataoperation.getDataItem().getValue()
 							+ ",version = " + dataoperation.getDataItem().getVersion() + " -> replace : (value = "
 							+ datastore.get(dataId).getValue() + ",version = " + datastore.get(dataId).getVersion()
 							+ ")");
-						datastore.put(dataId, new DataItem(dataoperation.getDataItem().getVersion(),dataoperation.getDataItem().getValue()));
-				
-					//}
+					datastore.put(dataId, new DataItem(dataoperation.getDataItem().getVersion(),
+							dataoperation.getDataItem().getValue()));
 
-			// We remove the the private workspace from the server either the decision is
-			// commit or not
-			
+					// }
+
+					// We remove the the private workspace from the server either the decision is
+					// commit or not
+
 				}
-			pw.previousWriteOperations=null;
-			pw.readCopies = null;
-			pw.writeCopies = null;
-			pw = null;
-			privateWorkspaces.remove(txn);
-				
+				pw.previousWriteOperations = null;
+				pw.readCopies = null;
+				pw.writeCopies = null;
+				pw = null;
+				privateWorkspaces.remove(txn);
+
 			}
 		}
-	
-		
 
-		
 		// Release the locks set by the current transaction over all the data items
-		for (Map.Entry<Integer,DataItem> entry : datastore.entrySet()) {
+		for (Map.Entry<Integer, DataItem> entry : datastore.entrySet()) {
 			Integer lock = entry.getValue().getLock();
-			if(lock != null && lock == txn.hashCode()) {
+			if (lock != null && lock == txn.hashCode()) {
 				entry.getValue().setLock(null);
 			}
 		}
-		
+
 	}
-	
+
 	private void OnGoodbyeMsg(ConsistencyTester.GoodbyeMsg msg) {
 		getSender().tell(new Server.GoodbyeMsg(serverId, datastore), getSelf());
 	}
