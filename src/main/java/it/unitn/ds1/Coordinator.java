@@ -224,7 +224,7 @@ public class Coordinator extends AbstractActor {
 		getServerByKey(key).tell(new Coordinator.WriteMsg(txn, dataOperation), getSelf());
 	}
 
-	private void OnTxnVoteMsg(Server.TxnVoteMsg msg) {
+	private void OnTxnVoteMsg(Server.TxnVoteMsg msg) throws InterruptedException  {
 		Txn txn = msg.txn;
 		Boolean vote = msg.vote;
 		if (vote) {
@@ -246,12 +246,14 @@ public class Coordinator extends AbstractActor {
 					servers.get(serverId).tell(new Coordinator.TxnVoteResultMsg(txn, true), getSelf());
 				}
 				// Remove the transaction
+				
 				transactions.remove(txn);
 				// Inform the client
 				Integer clientId = txn.getClientId();
 				clients.get(clientId).tell(new TxnResultMsg(true), getSelf());
 			}
 		} else {
+			
 			// ABORT vote, send ABORT result to all
 			List<DataOperation> dataoperations = transactions.get(txn);
 			// Check if there are pending operations
@@ -273,6 +275,7 @@ public class Coordinator extends AbstractActor {
 				}
 			}
 			// Remove the transaction
+			
 			transactions.remove(txn);
 			// Inform the client
 			Integer clientId = txn.getClientId();
@@ -280,7 +283,7 @@ public class Coordinator extends AbstractActor {
 		}
 	}
 
-	private void OnTxnEndMsg(TxnEndMsg msg) {
+	private void OnTxnEndMsg(TxnEndMsg msg) throws InterruptedException {
 		Integer clientId = msg.clientId;
 		Boolean commit = msg.commit;
 		log.debug("coordinator" + coordinatorId + "<--[TXN_END=" + commit + "]--client" + clientId);
@@ -305,6 +308,7 @@ public class Coordinator extends AbstractActor {
 			for (Integer serverId : serverIds) {
 				servers.get(serverId).tell(new Coordinator.TxnAskVoteMsg(txn), getSelf());
 			}
+			
 		} else {
 			// Client wants to abort
 			// Tell to each server to abort
@@ -312,10 +316,11 @@ public class Coordinator extends AbstractActor {
 				servers.get(serverId).tell(new Coordinator.TxnVoteResultMsg(txn, false), getSelf());
 			}
 			// And remove the transaction
+			Thread.sleep(300);
 			transactions.remove(txn);
+			getSender().tell(new TxnResultMsg(commit), getSelf());
 		}		
-
-		getSender().tell(new TxnResultMsg(commit), getSelf());
+		//getSender().tell(new TxnResultMsg(commit), getSelf());
 	}
 
 	@Override

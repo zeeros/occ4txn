@@ -281,7 +281,6 @@ public class TxnClient extends AbstractActor {
 		}
 		
 //only one txn test (temporary)
-		Thread.sleep(200);
 		beginTxn();
 	}
 
