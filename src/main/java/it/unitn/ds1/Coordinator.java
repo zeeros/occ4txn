@@ -263,11 +263,12 @@ public class Coordinator extends AbstractActor {
 		else {
 			// ABORT vote, send ABORT result to all
 			// Check if there are pending operations
-			// Exclude the current sender (that aborts autonomously)
-			serverIds.remove(msg.serverId);
+			// Exclude the current sender (that aborts autonomously) 
+			//serverIds.remove(msg.serverId);UPDATE : NOT SURE ?!
 			for (Integer serverId : serverIds) {
 				servers.get(serverId).tell(new Coordinator.TxnVoteResultMsg(txn, false), getSelf());
 			}
+			//serverIds.add(msg.serverId);
 			//send the result to the client
 			if (txn.getVotesCollected() == serverIds.size()) {
 			clients.get(clientId).tell(new TxnResultMsg(false), getSelf());
@@ -276,7 +277,6 @@ public class Coordinator extends AbstractActor {
 			//Remove the Txn when all votes collected (true or false)
 			
 			if (txn.getVotesCollected() == serverIds.size()) {
-			clients.get(clientId).tell(new TxnResultMsg(false), getSelf());
 			transactions.remove(txn);
 			}
 	}

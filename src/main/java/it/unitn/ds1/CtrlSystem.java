@@ -13,8 +13,8 @@ import java.util.List;
 import java.util.Map;
 
 public class CtrlSystem {
-	final static int N_CLIENTS = 2;
-	final static int N_COORDINATORS = 2;
+	final static int N_CLIENTS = 4;
+	final static int N_COORDINATORS = 4;
 	final static int N_SERVERS = 10;
 	final static int N_KEY_SERVER = 10;
 	final static int MAX_KEY = N_KEY_SERVER * N_SERVERS - 1;
