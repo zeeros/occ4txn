@@ -8,6 +8,7 @@ public class DataItem {
 	public DataItem(Integer version, Integer value) {
 		this.version = version;
 		this.value = value;
+		
 	}
 
 	public Integer getVersion() {
@@ -34,4 +35,27 @@ public class DataItem {
 		this.lock = lock;
 	}
 
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + value + 10000 * version;
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		DataItem other = (DataItem) obj;
+		if (value != other.value)
+			return false;
+		if (version != other.version)
+			return false;
+		return true;
+	}
 }

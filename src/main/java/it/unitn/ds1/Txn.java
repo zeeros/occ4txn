@@ -11,16 +11,21 @@ public class Txn {
 	boolean overwritesDone;
 	// number of "commit" votes
 	private Integer votes;
+	private Boolean resultSentToClient;
+	private Integer votesCollected;
 
 	public Txn(int coordinatorId, int clientId) {
 		this.coordinatorId = coordinatorId;
 		this.clientId = clientId;
 		this.votes = 0;
+		this.resultSentToClient = false;
+		this.votesCollected = 0;
 	}
 
 	public Integer getCoordinatorId() {
 		return coordinatorId;
 	}
+	
 
 	public Integer getClientId() {
 		return clientId;
@@ -33,12 +38,21 @@ public class Txn {
 	public void setVotes(Integer votes) {
 		this.votes = votes;
 	}
+	
+	public Integer getVotesCollected() {
+		return votesCollected;
+	}
 
+	public void setVotesCollected(Integer numberVotesCollected) {
+		this.votesCollected = votesCollected;
+		
+	}
+	
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + coordinatorId + clientId;
+		result = prime * result + 100 * coordinatorId + clientId;
 		return result;
 	}
 

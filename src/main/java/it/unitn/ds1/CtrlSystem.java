@@ -13,8 +13,8 @@ import java.util.List;
 import java.util.Map;
 
 public class CtrlSystem {
-	final static int N_CLIENTS = 10;
-	final static int N_COORDINATORS = 10;
+	final static int N_CLIENTS = 4;
+	final static int N_COORDINATORS = 4;
 	final static int N_SERVERS = 10;
 	final static int N_KEY_SERVER = 10;
 	final static int MAX_KEY = N_KEY_SERVER * N_SERVERS - 1;
@@ -47,7 +47,9 @@ public class CtrlSystem {
 			log.debug("Server " + i + " created");
 			HashMap<Integer, DataItem> datastore = new HashMap<Integer, DataItem>();
 			for (int j = 0; j < N_KEY_SERVER; j++) {
-				datastore.put(k++, new DataItem(0, INIT_ITEM_VALUE));
+				DataItem dataItem = new DataItem(0,INIT_ITEM_VALUE);
+				dataItem.setLock(null);
+				datastore.put(k++, dataItem);
 			}
 			servers.put(i, system.actorOf(Server.props(i, datastore), "server" + i));
 		}
@@ -79,10 +81,10 @@ public class CtrlSystem {
 			for (Map.Entry<Integer, ActorRef> entry : clients.entrySet()) {
 				entry.getValue().tell(new TxnClient.StopMsg(), null);
 			}
-			Thread.sleep(1000);
+			Thread.sleep(3000);
 			consistencyTester.tell(new ConsistencyTester.GoodbyeMsg(), null);
 			// Wait for the consistency tester to check the data stores
-			Thread.sleep(1000);
+			Thread.sleep(3000);
 			system.terminate();
 		}
 		
