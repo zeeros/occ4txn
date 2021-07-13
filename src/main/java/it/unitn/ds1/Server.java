@@ -177,7 +177,7 @@ public class Server extends AbstractActor {
 		}
 		// DataItem dataItemCopy = dataoperation.getDataItem();
 		log.debug("server" + serverId + "<--[READ(" + dataoperation.getKey() + ")]--coordinator"
-				+ txn.getCoordinatorId());
+				+ msg.coordinatorId);
 
 		// copy of the dataitem that will be temporary stored in the private workspace
 		DataItem dataItemCopy = new DataItem(dataoperation.getDataItem().getVersion(),
@@ -228,7 +228,7 @@ public class Server extends AbstractActor {
 		Integer newDataOperationCounter = previousWriteOperations.get(dataId) + 1;
 		previousWriteOperations.replace(dataId, newDataOperationCounter);
 		log.debug("server" + serverId + "<--[WRITE(" + dataoperation.getKey() + ")=" + newDataItem.getValue()
-				+ ", previousversion=" + version + "]--coordinator" + txn.getCoordinatorId());
+				+ ", previousversion=" + version + "]--coordinator" + msg.coordinatorId);
 
 		// copy of the dataitem that will be temporary stored in the private workspace
 		pw.writeCopies.add(new DataOperation(DataOperation.Type.WRITE, dataId, newDataItem));
@@ -242,7 +242,6 @@ public class Server extends AbstractActor {
 		PrivateWorkspace pw = getPrivateWorkspaceByTxn(txn);
 
 		DataItem dataItemReadCheck, dataItemWriteCheck;
-		HashMap<Integer, Integer> previousWriteOperations = pw.previousWriteOperations;
 		// We check if the version of the data read is the same as the one in the
 		// datastore or the last in the private workspace and set lock if the data Items
 		// are not already locked by another TXN
@@ -290,9 +289,6 @@ public class Server extends AbstractActor {
 				DataItem dataItemOriginal = datastore.get(dataId);
 				Integer lock = dataItemOriginal.getLock();
 				if (lock != null && lock != txn.hashCode()) {
-					log.debug("hello version dataoperation : " + dataoperation.getDataItem().getVersion()
-							+ "version Origanal : " + dataItemOriginal.getVersion() + "lock : " + lock
-							+ "txnhashcode : " + txn.hashCode());
 					vote = false;
 				} else {
 					// Set the lock for the current item
@@ -380,7 +376,6 @@ public class Server extends AbstractActor {
 				.match(ConsistencyTester.GoodbyeMsg.class, this::OnGoodbyeMsg).build();
 	}
 
-	// Depends only on account number
 	@Override
 	public int hashCode() {
 		final int prime = 31;
@@ -401,9 +396,6 @@ public class Server extends AbstractActor {
 		if (serverId != other.serverId)
 			return false;
 		return true;
-	}
-
-	private <P extends Object> void OnLocalSumCheckMsg(P p1) {
 	}
 
 }
