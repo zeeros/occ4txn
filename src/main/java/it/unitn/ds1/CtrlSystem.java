@@ -67,7 +67,7 @@ public class CtrlSystem {
 			peer.tell(wCoordinator, null);
 		}
 		
-		consistencyTester.tell(new ConsistencyTester.WelcomeMsg(servers, N_KEY_SERVER, INIT_ITEM_VALUE), null);	
+		consistencyTester.tell(new ConsistencyTester.WelcomeMsg(servers), null);	
 		
 		log.info("Press ENTER to exit");
 		try {
