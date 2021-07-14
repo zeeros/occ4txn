@@ -11,14 +11,12 @@ public class Txn {
 	boolean overwritesDone;
 	// number of "commit" votes
 	private Integer votes;
-	private Boolean resultSentToClient;
 	private Integer votesCollected;
 
 	public Txn(int coordinatorId, int clientId) {
 		this.coordinatorId = coordinatorId;
 		this.clientId = clientId;
 		this.votes = 0;
-		this.resultSentToClient = false;
 		this.votesCollected = 0;
 	}
 
@@ -43,7 +41,7 @@ public class Txn {
 		return votesCollected;
 	}
 
-	public void setVotesCollected(Integer numberVotesCollected) {
+	public void setVotesCollected(Integer votesCollected) {
 		this.votesCollected = votesCollected;
 		
 	}
