@@ -39,7 +39,7 @@ public class DataItem {
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + value + 10000 * version;
+		result = prime * result + value + 100000 * version;
 		return result;
 	}
 

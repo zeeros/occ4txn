@@ -79,8 +79,9 @@ public class Server extends AbstractActor {
 				Integer version = 0;
 				DataItem lastDataItem = null;
 				for (DataItem dataItem : itemsWithSameId) {
-					if (dataItem.getVersion() >= version)
+					if (dataItem.getVersion() >= version) {
 						version = dataItem.getVersion();
+						}
 					lastDataItem = dataItem;
 				}
 				return lastDataItem;
@@ -91,7 +92,7 @@ public class Server extends AbstractActor {
 		public int hashCode() {
 			final int prime = 31;
 			int result = 1;
-			result = prime * result + txn.hashCode() + 1000 * serverId;
+			result = prime * result + txn.getClientId() + 100000 * txn.getCoordinatorId() + 1000 * serverId;
 			return result;
 		}
 
@@ -144,7 +145,7 @@ public class Server extends AbstractActor {
 		public int serverId;
 		public Map<Integer, DataItem> datastore;
 
-		public GoodbyeMsg(int serverId, Map<Integer, DataItem> datastore) {
+		public GoodbyeMsg(int serverId, Map<Integer, DataItem> datastore)  {
 			this.serverId = serverId;
 			this.datastore = datastore;
 		}
@@ -175,13 +176,14 @@ public class Server extends AbstractActor {
 
 			dataoperation.setDataItem(pw.getLastDataItemByCopies(dataId, pw.writeCopies));
 		}
-		// DataItem dataItemCopy = dataoperation.getDataItem();
+		
 		log.debug("server" + serverId + "<--[READ(" + dataoperation.getKey() + ")]--coordinator"
-				+ msg.coordinatorId);
+				+ txn.getCoordinatorId());
 
 		// copy of the dataitem that will be temporary stored in the private workspace
 		DataItem dataItemCopy = new DataItem(dataoperation.getDataItem().getVersion(),
 				dataoperation.getDataItem().getValue());
+		
 		pw.readCopies.add(new DataOperation(Type.READ, dataId, dataoperation.getDataItem()));
 		// Respond to the coordinator with the serverId, TXN, its data operation and the
 		// value in the datastore
@@ -218,6 +220,7 @@ public class Server extends AbstractActor {
 			// Otherwise retrieve from the private workspace
 		} else {
 			dataItemOverwriten = pw.getLastDataItemByCopies(dataId, pw.writeCopies);
+			
 		}
 		// Increase the data version
 
@@ -226,9 +229,9 @@ public class Server extends AbstractActor {
 
 		// Increase the number of previous write operation for the Txn
 		Integer newDataOperationCounter = previousWriteOperations.get(dataId) + 1;
-		previousWriteOperations.replace(dataId, newDataOperationCounter);
+		pw.previousWriteOperations.replace(dataId, newDataOperationCounter);
 		log.debug("server" + serverId + "<--[WRITE(" + dataoperation.getKey() + ")=" + newDataItem.getValue()
-				+ ", previousversion=" + version + "]--coordinator" + msg.coordinatorId);
+				+ ", previousversion=" + version + "]--coordinator" + txn.getCoordinatorId());
 
 		// copy of the dataitem that will be temporary stored in the private workspace
 		pw.writeCopies.add(new DataOperation(DataOperation.Type.WRITE, dataId, newDataItem));
@@ -242,6 +245,7 @@ public class Server extends AbstractActor {
 		PrivateWorkspace pw = getPrivateWorkspaceByTxn(txn);
 
 		DataItem dataItemReadCheck, dataItemWriteCheck;
+		HashMap<Integer, Integer> previousWriteOperations = pw.previousWriteOperations;
 		// We check if the version of the data read is the same as the one in the
 		// datastore or the last in the private workspace and set lock if the data Items
 		// are not already locked by another TXN
@@ -289,6 +293,9 @@ public class Server extends AbstractActor {
 				DataItem dataItemOriginal = datastore.get(dataId);
 				Integer lock = dataItemOriginal.getLock();
 				if (lock != null && lock != txn.hashCode()) {
+					log.debug("hello version dataoperation : " + dataoperation.getDataItem().getVersion()
+							+ "version Origanal : " + dataItemOriginal.getVersion() + "lock : " + lock
+							+ "txnhashcode : " + txn.hashCode());
 					vote = false;
 				} else {
 					// Set the lock for the current item
@@ -376,6 +383,7 @@ public class Server extends AbstractActor {
 				.match(ConsistencyTester.GoodbyeMsg.class, this::OnGoodbyeMsg).build();
 	}
 
+	// Depends only on account number
 	@Override
 	public int hashCode() {
 		final int prime = 31;
@@ -396,6 +404,9 @@ public class Server extends AbstractActor {
 		if (serverId != other.serverId)
 			return false;
 		return true;
+	}
+
+	private <P extends Object> void OnLocalSumCheckMsg(P p1) {
 	}
 
 }
