@@ -56,12 +56,10 @@ public class Coordinator extends AbstractActor {
 	public static class ReadMsg implements Serializable {
 		public final Txn txn;
 		public final DataOperation dataoperation;
-		public final Integer coordinatorId;
 
-		public ReadMsg(Txn txn, DataOperation dataoperation, Integer coordinatorId) {
+		public ReadMsg(Txn txn, DataOperation dataoperation) {
 			this.txn = txn;
 			this.dataoperation = dataoperation;
-			this.coordinatorId = coordinatorId;
 		}
 	}
 
@@ -71,12 +69,10 @@ public class Coordinator extends AbstractActor {
 	public static class WriteMsg implements Serializable {
 		public final Txn txn;
 		public final DataOperation dataoperation;
-		public final Integer coordinatorId;
 
-		public WriteMsg(Txn txn, DataOperation dataoperation, Integer coordinatorId) {
+		public WriteMsg(Txn txn, DataOperation dataoperation) {
 			this.txn = txn;
 			this.dataoperation = dataoperation;
-			this.coordinatorId = coordinatorId;
 		}
 	}
 
@@ -170,11 +166,11 @@ public class Coordinator extends AbstractActor {
 
 	private void OnTxnBeginMsg(TxnBeginMsg msg) {
 		Integer clientId = msg.clientId;
-		Txn txn = new Txn(clientId);
+		Txn txn = new Txn(coordinatorId, clientId);
 
 		log.debug("coordinator" + coordinatorId + "<--[TXN_BEGIN]--client" + clientId);
 
-		List<DataOperation> dataOperations = transactions.get(new Txn(clientId));
+		List<DataOperation> dataOperations = transactions.get(new Txn(coordinatorId, clientId));
 		if (dataOperations == null) {
 			// The client has no ongoing transaction, initialize the data operations
 			transactions.put(txn, new ArrayList<DataOperation>());
@@ -200,7 +196,7 @@ public class Coordinator extends AbstractActor {
 		List<DataOperation> dataoperations = transactions.get(txn);
 		dataoperations.add(dataOperation);
 		// Send the READ request to the server
-		getServerByKey(key).tell(new Coordinator.ReadMsg(txn, dataOperation, coordinatorId), getSelf());
+		getServerByKey(key).tell(new Coordinator.ReadMsg(txn, dataOperation), getSelf());
 	}
 
 	private void OnReadResultMsg(Coordinator.ReadResultMsg msg) {
@@ -233,7 +229,7 @@ public class Coordinator extends AbstractActor {
 		// Append the WRITE operation to the list of data operations of the transaction
 		dataoperations.add(dataOperation);
 		// Send the WRITE request to the server
-		getServerByKey(key).tell(new Coordinator.WriteMsg(txn, dataOperation, coordinatorId), getSelf());
+		getServerByKey(key).tell(new Coordinator.WriteMsg(txn, dataOperation), getSelf());
 	}
 
 	/*
@@ -304,7 +300,7 @@ public class Coordinator extends AbstractActor {
 		log.debug("coordinator" + coordinatorId + "<--[TXN_END=" + commit + "]--client" + clientId);
 
 		// Retrieve the transaction
-		Txn txn = new Txn(clientId);
+		Txn txn = new Txn(coordinatorId, clientId);
 		Set<Integer> serverIds = getServersId(txn);
 
 		if (commit == true) {

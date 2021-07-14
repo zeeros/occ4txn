@@ -186,7 +186,7 @@ public class Server extends AbstractActor {
 		readDataItem = new DataItem(dataoperation.getDataItem().getVersion(),
 				dataoperation.getDataItem().getValue());
 		log.debug("server" + serverId + "<--[READ(" + dataoperation.getKey() + ")]--coordinator"
-				+ msg.coordinatorId);
+				+ txn.getCoordinatorId());
 		// copy & store the dataitem in the private workspace
 		pw.readCopies.add(new DataOperation(Type.READ, dataId, dataoperation.getDataItem()));
 		// Answer to the coordinator with the serverId, the txn and the updated data operation
@@ -230,7 +230,7 @@ public class Server extends AbstractActor {
 		previousWriteOperations.replace(dataId, newDataOperationCounter);
 		
 		log.debug("server" + serverId + "<--[WRITE(" + dataoperation.getKey() + ")=" + newDataItem.getValue()
-				+ ", previousversion=" + version + "]--coordinator" + msg.coordinatorId);
+				+ ", previousversion=" + version + "]--coordinator" + txn.getCoordinatorId());
 
 		// copy the dataitem that will be temporary stored in the private workspace
 		pw.writeCopies.add(new DataOperation(DataOperation.Type.WRITE, dataId, newDataItem));

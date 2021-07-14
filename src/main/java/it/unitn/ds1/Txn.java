@@ -1,6 +1,7 @@
 package it.unitn.ds1;
 
 public class Txn {
+	private final Integer coordinatorId;
 	private final Integer clientId;
 	// indicates the state of the transaction :
 	// validated if the TXN is consistent
@@ -12,13 +13,17 @@ public class Txn {
 	private Integer votes;
 	private Integer votesCollected;
 
-	public Txn(int clientId) {
+	public Txn(int coordinatorId, int clientId) {
+		this.coordinatorId = coordinatorId;
 		this.clientId = clientId;
-	    // collects the number of "yes "vote answer from the servers involved in the Txn
 		this.votes = 0;
-	    // collects the number of vote answer from the servers involved in the Txn
 		this.votesCollected = 0;
 	}
+
+	public Integer getCoordinatorId() {
+		return coordinatorId;
+	}
+	
 
 	public Integer getClientId() {
 		return clientId;
@@ -31,20 +36,21 @@ public class Txn {
 	public void setVotes(Integer votes) {
 		this.votes = votes;
 	}
-	// 
+	
 	public Integer getVotesCollected() {
 		return votesCollected;
 	}
 
 	public void setVotesCollected(Integer votesCollected) {
 		this.votesCollected = votesCollected;
+		
 	}
 	
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + clientId ;
+		result = prime * result + 100 * coordinatorId + clientId;
 		return result;
 	}
 
@@ -57,6 +63,8 @@ public class Txn {
 		if (getClass() != obj.getClass())
 			return false;
 		Txn other = (Txn) obj;
+		if (coordinatorId != other.getCoordinatorId())
+			return false;
 		if (clientId != other.getClientId())
 			return false;
 		return true;
