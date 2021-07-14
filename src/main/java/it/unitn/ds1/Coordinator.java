@@ -253,6 +253,7 @@ public class Coordinator extends AbstractActor {
 		// From the keys, retrieve the IDs of the servers involved in the transaction
 		for (Integer key : keys) {
 			serverIds.add(getServerIdByKey(key));
+			
 		}
 		return serverIds;
 	}
@@ -315,9 +316,9 @@ public class Coordinator extends AbstractActor {
 			for (Integer serverId : serverIds) {
 				servers.get(serverId).tell(new Coordinator.TxnVoteResultMsg(txn, false), getSelf());
 			}
-			// Wait the servers to clean up their private workspaces
+			
 			Thread.sleep(300);
-			// Remove the transaction
+			//Remove the transaction
 			transactions.remove(txn);
 			getSender().tell(new TxnResultMsg(commit), getSelf());
 		}

@@ -99,7 +99,7 @@ public class Server extends AbstractActor {
 		public int hashCode() {
 			final int prime = 31;
 			int result = 1;
-			result = prime * result + txn.hashCode() + 1000 * serverId;
+			result = prime * result + 100 * txn.getClientId() + txn.getCoordinatorId() + 1000 * serverId;
 			return result;
 		}
 
@@ -167,6 +167,7 @@ public class Server extends AbstractActor {
 		DataOperation dataoperation = msg.dataoperation;
 		Integer dataId = dataoperation.getKey();
 		DataItem readDataItem;
+		
 		// First, get the pw of the Txn
 		// if no private workspace of the Txn txn : creation process
 		PrivateWorkspace pw = getPrivateWorkspaceByTxn(txn);
@@ -176,17 +177,20 @@ public class Server extends AbstractActor {
 		}
 		// Retrieve the current version by first checking if previous writes have been done
 		HashMap<Integer, Integer> previousWriteOperations = pw.previousWriteOperations;
+		
 		// If no write operations before : retrieve the dataItem in the data store and set the value of the data operation
 		if (previousWriteOperations.get(dataId) == 0) {
 			dataoperation.setDataItem(datastore.get(dataId));
+			
+		// Otherwise : retrieve the last version of the dataItem in the data store in the PW and set the value of the data operation
 		} else {
-			// Otherwise : retrieve the last version of the dataItem in the data store in the PW and set the value of the data operation
 			dataoperation.setDataItem(pw.getLastDataItemOfCopies(dataId, pw.writeCopies));
 		}
 		readDataItem = new DataItem(dataoperation.getDataItem().getVersion(),
 				dataoperation.getDataItem().getValue());
 		log.debug("server" + serverId + "<--[READ(" + dataoperation.getKey() + ")]--coordinator"
 				+ txn.getCoordinatorId());
+		
 		// copy & store the dataitem in the private workspace
 		pw.readCopies.add(new DataOperation(Type.READ, dataId, dataoperation.getDataItem()));
 		// Answer to the coordinator with the serverId, the txn and the updated data operation
@@ -216,7 +220,7 @@ public class Server extends AbstractActor {
 		// retrieve the original dataItem from the data store
 		
 		if (previousWriteOperations.get(dataId) == 0) {
-			dataItemOverwriten = datastore.get(msg.dataoperation.getKey());
+			dataItemOverwriten = datastore.get(dataId);
 			// Otherwise : retrieve the last version of the dataItem in the data store in the PW 
 		} else {
 			dataItemOverwriten = pw.getLastDataItemOfCopies(dataId, pw.writeCopies);
@@ -227,7 +231,7 @@ public class Server extends AbstractActor {
 
 		// Increase the number of previous write operation for the Txn
 		Integer newDataOperationCounter = previousWriteOperations.get(dataId) + 1;
-		previousWriteOperations.replace(dataId, newDataOperationCounter);
+		previousWriteOperations.put(dataId, newDataOperationCounter);
 		
 		log.debug("server" + serverId + "<--[WRITE(" + dataoperation.getKey() + ")=" + newDataItem.getValue()
 				+ ", previousversion=" + version + "]--coordinator" + txn.getCoordinatorId());
@@ -313,7 +317,7 @@ public class Server extends AbstractActor {
 		//Check if items involved in the txn are already locked
 		//If so : vote false
 		//If not : set locks to the dataitems
-		if (!CheckAndSetLocks(txn, pw)) {
+		if (CheckAndSetLocks(txn, pw) == false) {
 			vote = false;
 		}
 		
@@ -340,7 +344,7 @@ public class Server extends AbstractActor {
 			Integer dataId = dataoperation.getKey();
 			dataItemWriteCheck = dataoperation.getDataItem();
 			DataItem dataItemOriginal = datastore.get(dataId);
-			if ((dataoperation.getDataItem().getVersion() - dataItemOriginal.getVersion()) <= 0) {
+			if ((dataItemWriteCheck.getVersion() - dataItemOriginal.getVersion()) <= 0) {
 				vote = false;
 			}
 		}
@@ -385,8 +389,9 @@ public class Server extends AbstractActor {
 			pw.readCopies = null;
 			pw.writeCopies = null;
 			pw = null;
-			privateWorkspaces.remove(txn);
+			
 		}
+		privateWorkspaces.remove(txn);
 		// Release the locks set by the current transaction over all the data items
 		ReleaseLocks(txn);
 
