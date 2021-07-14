@@ -15,7 +15,7 @@ public class TxnClient extends AbstractActor {
 	private static final double COMMIT_PROBABILITY = 0.8;
 	private static final double WRITE_PROBABILITY = 0.7;
 	private static final int MIN_TXN_LENGTH = 2;
-	private static final int MAX_TXN_LENGTH = 12;
+	private static final int MAX_TXN_LENGTH = 4;
 	private static final int RAND_LENGTH_RANGE = MAX_TXN_LENGTH - MIN_TXN_LENGTH + 1;
 
 	private final Integer clientId;
