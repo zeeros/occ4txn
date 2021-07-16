@@ -54,3 +54,8 @@ TXNs directly run on the private workspaces, and if valid they are later commite
 *** Server
 
 The server stores a part of the distributed data, that consists in a simple collection of key-value pairs (with integer values). A data store server $S_i$ manages data with keys in the range $[10i \cdots 10i+9]$.
+* Improvements
+
+- Simulations of failures of coordinators and servers.
+- Fault tolerance for such failures.
+- With more than 10 servers some errors arise, however these errors don't affect the consistency of the data stores.
