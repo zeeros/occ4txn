@@ -350,7 +350,7 @@ public class Server extends AbstractActor {
 		}
 		//Notify the coordinator of the decision of server
 		getSender().tell(new TxnVoteMsg(txn, vote, serverId), getSelf());
-		log.info("ServerId : " + serverId + " -> coordinator : " + getSender() + "(local vote result = " + vote);
+		log.info("ServerId : " + serverId + " -> coordinator : " + txn.getCoordinatorId() + "(local vote result = " + vote);
 	}
 
 	private void OnTxnVoteResultMsg(Coordinator.TxnVoteResultMsg msg) {
