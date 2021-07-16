@@ -13,8 +13,8 @@ import java.util.List;
 import java.util.Map;
 
 public class CtrlSystem {
-	final static int N_CLIENTS = 4;
-	final static int N_COORDINATORS = 4;
+	final static int N_CLIENTS = 10;
+	final static int N_COORDINATORS = 10;
 	final static int N_SERVERS = 10;
 	final static int N_KEY_SERVER = 10;
 	final static int MAX_KEY = N_KEY_SERVER * N_SERVERS - 1;
@@ -54,23 +54,20 @@ public class CtrlSystem {
 			servers.put(i, system.actorOf(Server.props(i, datastore), "server" + i));
 		}
 		
-		// The consistency tester is used to check if the distributed data store has a consistent state
-		
+		// The consistency tester is used to check if the distributed data store has a consistent state	
 		ActorRef consistencyTester = system.actorOf(ConsistencyTester.props(0), "consistencyTester");
 
-		// Send welcome messages to clients, coordinators and servers
-
+		// Send welcome messages to clients, coordinators and the consistency tester
 		TxnClient.WelcomeMsg wClient = new TxnClient.WelcomeMsg(MAX_KEY, coordinators);
 		for (Map.Entry<Integer, ActorRef> entry : clients.entrySet()) {
 			entry.getValue().tell(wClient, null);
 		}
-
 		Coordinator.WelcomeMsg wCoordinator = new Coordinator.WelcomeMsg(clients, servers, N_KEY_SERVER);
 		for (ActorRef peer : coordinators) {
 			peer.tell(wCoordinator, null);
 		}
 		
-		consistencyTester.tell(new ConsistencyTester.WelcomeMsg(servers, N_KEY_SERVER, INIT_ITEM_VALUE), null);	
+		consistencyTester.tell(new ConsistencyTester.WelcomeMsg(servers), null);	
 		
 		log.info("Press ENTER to exit");
 		try {
@@ -81,10 +78,11 @@ public class CtrlSystem {
 			for (Map.Entry<Integer, ActorRef> entry : clients.entrySet()) {
 				entry.getValue().tell(new TxnClient.StopMsg(), null);
 			}
-			Thread.sleep(3000);
+			// Wait for the clients to stop
+			Thread.sleep(1000);
 			consistencyTester.tell(new ConsistencyTester.GoodbyeMsg(), null);
 			// Wait for the consistency tester to check the data stores
-			Thread.sleep(3000);
+			Thread.sleep(1000);
 			system.terminate();
 		}
 		
