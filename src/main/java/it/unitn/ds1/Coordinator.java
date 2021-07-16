@@ -262,6 +262,8 @@ public class Coordinator extends AbstractActor {
 		Txn txn = msg.txn;
 		Boolean vote = msg.vote;
 		Integer clientId = txn.getClientId();
+		
+		txn.setVotesCollected(txn.getVotesCollected() + 1);
 
 		Set<Integer> serverIds = getServersId(txn);
 		if (vote) {
